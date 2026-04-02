@@ -1,0 +1,5 @@
+data/
+uploads/slides/*
+!uploads/slides/.gitkeep
+__pycache__/
+*.pyc

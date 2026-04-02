@@ -1,0 +1,939 @@
+:root {
+  --bg: #f8f1ea;
+  --panel: rgba(255, 250, 245, 0.96);
+  --line: rgba(118, 78, 53, 0.14);
+  --text: #2d2018;
+  --muted: #7b6456;
+  --accent: #b85c34;
+  --accent-deep: #8d3a1d;
+  --shadow: 0 18px 42px rgba(99, 61, 34, 0.1);
+  --radius: 26px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.hidden {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(214, 153, 96, 0.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(196, 119, 70, 0.1), transparent 28%),
+    linear-gradient(180deg, #fffaf5 0%, #f6ede4 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  background: rgba(255, 250, 245, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 30px;
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+
+.auth-kicker {
+  margin-bottom: 10px;
+  color: var(--accent-deep);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+}
+
+.auth-card h1 {
+  margin-bottom: 10px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.auth-toggle {
+  border: none;
+  background: transparent;
+  color: var(--accent-deep);
+  font-weight: 700;
+  margin-top: 18px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.auth-message {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(184, 92, 52, 0.1);
+  color: var(--accent-deep);
+}
+
+.page-shell {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.page-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background: url("assets/feature-color.jpg") center top / cover no-repeat;
+  z-index: -1;
+}
+
+.brand-hero {
+  margin-bottom: 24px;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sync-pill,
+.account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 250, 245, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow);
+}
+
+.sync-pill {
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+.brand-hero-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 500px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  background: rgba(39, 23, 14, 0.18);
+}
+
+.brand-hero-logo {
+  position: relative;
+  z-index: 2;
+  width: min(280px, 28%);
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.24));
+}
+
+.brand-hero-slides {
+  position: absolute;
+  inset: 0;
+}
+
+.brand-hero-slides::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(22, 14, 11, 0.36) 0%, rgba(22, 14, 11, 0.08) 46%, rgba(22, 14, 11, 0.22) 100%);
+}
+
+.brand-hero-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 900ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 26px;
+}
+
+.brand-hero-slide.is-active {
+  opacity: 1;
+}
+
+.brand-hero-slide-backdrop {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(22px) saturate(0.9);
+  transform: scale(1.08);
+  opacity: 0.9;
+}
+
+.brand-hero-slide-image {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.stat-card,
+.panel,
+.lead-card,
+.schedule-card,
+.team-member-item,
+.wedding-event-item {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  border-radius: 30px;
+  padding: 28px;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hero-stats-only {
+  margin-bottom: 0;
+}
+
+.stat-card {
+  border-radius: 22px;
+  padding: 18px;
+  min-height: 0;
+  backdrop-filter: blur(10px);
+}
+
+.stat-card span {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.stat-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+.panel-heading p,
+.empty-state p,
+.lead-notes,
+.schedule-notes,
+.filter-label,
+.subsection-header p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.tab-button,
+.primary-button,
+.secondary-button,
+.delete-button,
+.edit-button {
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.tab-button {
+  padding: 12px 18px;
+  background: rgba(255, 248, 240, 0.92);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.tab-button.active,
+.primary-button {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: #fff;
+}
+
+.primary-button,
+.secondary-button,
+.edit-button {
+  padding: 14px 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.secondary-button {
+  background: #4d6258;
+  color: #fff;
+}
+
+.edit-button {
+  background: rgba(77, 98, 88, 0.12);
+  color: var(--text);
+  padding: 10px 14px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 24px;
+}
+
+.two-column-form,
+.team-member-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.lead-form {
+  display: grid;
+  gap: 16px;
+}
+
+.form-actions,
+.card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lead-form label,
+.lead-actions label,
+.filter-label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.filter-label input {
+  min-width: 220px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  border-radius: 18px;
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(184, 92, 52, 0.08);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.board-header,
+.subsection-header,
+.event-builder-header,
+.lead-card-top,
+.schedule-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.subsection,
+.event-builder {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid var(--line);
+}
+
+.availability-alert {
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(184, 92, 52, 0.2);
+  background: rgba(184, 92, 52, 0.08);
+  color: var(--accent-deep);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.saved-section {
+  margin-top: 24px;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 0;
+  justify-self: start;
+  width: auto;
+}
+
+.checkbox-field input {
+  width: auto;
+  transform: scale(1.15);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.checkbox-field span {
+  display: inline;
+  line-height: 1.3;
+}
+
+.inline-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 56px;
+}
+
+.prewedding-date-wrap {
+  display: grid;
+  max-width: 320px;
+}
+
+.summary-checkbox-row {
+  margin-top: 16px;
+}
+
+.summary-field-row {
+  margin-top: 16px;
+}
+
+.summary-field-row label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.subsection-header h3,
+.event-builder-header h3 {
+  margin-bottom: 6px;
+}
+
+.subsection-header .secondary-button,
+.event-builder-header .secondary-button {
+  padding: 10px 14px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  flex: 0 1 auto;
+}
+
+.team-list,
+.wedding-event-list,
+.lead-list,
+.schedule-list,
+.deliverable-list {
+  display: grid;
+  gap: 14px;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.calendar-controls .secondary-button {
+  padding: 10px 14px;
+}
+
+.calendar-month-label {
+  min-width: 170px;
+  text-align: center;
+  font-weight: 700;
+  color: #fff8f1;
+}
+
+.calendar-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(18, 10, 7, 0.7), rgba(61, 28, 16, 0.42)),
+    url("assets/hero-wedding.jpg") center center / cover;
+}
+
+.calendar-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(10, 8, 7, 0.16));
+  opacity: 1;
+  pointer-events: none;
+}
+
+.calendar-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.calendar-panel .panel-heading h2,
+.calendar-panel .panel-heading p,
+.calendar-panel .calendar-weekdays div {
+  color: #fff8f1;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-weekdays {
+  margin: 18px 0 10px;
+}
+
+.calendar-weekdays div {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.calendar-day {
+  position: relative;
+  min-height: 108px;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 248, 240, 0.88);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+}
+
+.calendar-day-empty {
+  min-height: 0;
+  border: none;
+  background: transparent;
+}
+
+.calendar-day-number {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.calendar-day-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+.calendar-day-preview {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.calendar-day-blocked {
+  border-color: rgba(255, 227, 198, 0.44);
+  background:
+    linear-gradient(180deg, rgba(184, 92, 52, 0.16) 0%, rgba(255, 252, 248, 0.92) 100%),
+    url("assets/feature-couple.jpg") center center / cover;
+}
+
+.calendar-day-today {
+  box-shadow: inset 0 0 0 2px rgba(77, 98, 88, 0.32);
+}
+
+.calendar-tooltip {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(100% + 8px);
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fffaf4;
+  border: 1px solid rgba(118, 78, 53, 0.18);
+  box-shadow: 0 18px 40px rgba(99, 61, 34, 0.14);
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.calendar-day:hover .calendar-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.team-member-item,
+.wedding-event-item {
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.team-member-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.team-member-item .remove-team-button {
+  margin-top: 12px;
+  min-width: 120px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.editor-deliverable-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.editor-deliverable-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  min-width: 0;
+}
+
+.editor-deliverable-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+
+.editor-deliverable-field span {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.editor-deliverable-field select,
+.editor-deliverable-field input {
+  min-width: 0;
+  width: 100%;
+}
+
+.custom-deliverable-field.hidden {
+  display: none;
+}
+
+.remove-deliverable-button {
+  justify-self: start;
+  min-width: 140px;
+  padding: 12px 14px;
+}
+
+.deliverable-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  margin-bottom: 10px;
+}
+
+.deliverable-status-row:last-child {
+  margin-bottom: 0;
+}
+
+.deliverable-status-row span {
+  font-size: 0.94rem;
+  color: var(--text);
+}
+
+.lead-card,
+.schedule-card {
+  border-radius: 22px;
+  padding: 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.client-title,
+.schedule-title {
+  font-size: 1.2rem;
+  margin-bottom: 0;
+}
+
+.lead-meta,
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.lead-meta a,
+.schedule-grid a {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+.lead-notes,
+.schedule-notes {
+  margin-bottom: 18px;
+}
+
+.lead-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.delete-button {
+  padding: 10px 12px;
+  background: rgba(141, 58, 29, 0.08);
+  color: var(--accent-deep);
+}
+
+.empty-state {
+  padding: 46px 22px;
+  border: 1px dashed var(--line);
+  border-radius: 22px;
+  text-align: center;
+  background: rgba(255, 248, 240, 0.72);
+}
+
+.schedule-date {
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--accent-deep);
+  margin-bottom: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.status-enquiry {
+  background: rgba(241, 194, 125, 0.22);
+  color: #8f5f11;
+}
+
+.status-follow-up,
+.status-editing {
+  background: rgba(95, 128, 186, 0.14);
+  color: #355f93;
+}
+
+.status-confirmed,
+.status-delivered {
+  background: rgba(52, 115, 95, 0.14);
+  color: #2f6a58;
+}
+
+.status-completed,
+.status-paid {
+  background: rgba(119, 93, 176, 0.14);
+  color: #5e4696;
+}
+
+.status-closed,
+.status-pending,
+.status-review {
+  background: rgba(123, 107, 91, 0.14);
+  color: #6c5a4f;
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .layout,
+  .two-column-form,
+  .team-member-grid,
+  .status-grid,
+  .deliverable-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .subsection-header,
+  .event-builder-header {
+    align-items: start;
+  }
+
+  .hero-copy-wrap {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-card {
+    padding: 24px;
+  }
+
+  .page-shell {
+    width: min(100% - 20px, 1240px);
+    padding-top: 20px;
+  }
+
+  .app-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sync-pill,
+  .account-pill {
+    justify-content: space-between;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .board-header,
+  .subsection-header,
+  .event-builder-header,
+  .lead-card-top,
+  .schedule-top,
+  .lead-actions,
+  .form-actions,
+  .card-actions,
+  .editor-deliverable-item {
+    display: grid;
+  }
+
+  .subsection-header .secondary-button,
+  .event-builder-header .secondary-button {
+    justify-self: start;
+  }
+
+  .calendar-controls {
+    width: 100%;
+  }
+
+  .calendar-month-label {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .calendar-day {
+    min-height: 84px;
+    padding: 10px;
+  }
+
+  .brand-hero-card {
+    min-height: 240px;
+  }
+
+  .brand-hero-logo {
+    width: min(180px, 46%);
+  }
+
+  .calendar-day-preview,
+  .calendar-day-count,
+  .calendar-weekdays div {
+    font-size: 0.76rem;
+  }
+
+  .hero-logo {
+    width: min(180px, 56%);
+  }
+
+  .hero-filmstrip {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-film-card {
+    min-height: 116px;
+  }
+
+  .schedule-date {
+    white-space: normal;
+  }
+}
