@@ -42,13 +42,24 @@ button:disabled {
 }
 
 .auth-shell {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: grid;
   place-items: center;
   padding: 24px;
 }
 
+.auth-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(19, 10, 7, 0.54);
+  backdrop-filter: blur(8px);
+}
+
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: min(460px, 100%);
   background: rgba(255, 250, 245, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.74);
@@ -86,12 +97,191 @@ button:disabled {
   cursor: pointer;
 }
 
+.auth-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-close-button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .auth-message {
   margin-top: 16px;
   padding: 12px 14px;
   border-radius: 16px;
   background: rgba(184, 92, 52, 0.1);
   color: var(--accent-deep);
+}
+
+.public-shell {
+  width: min(1320px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+
+.public-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.public-topbar-logo {
+  width: min(220px, 42vw);
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.24));
+}
+
+.public-main {
+  display: grid;
+  gap: 24px;
+}
+
+.public-hero {
+  margin-bottom: 0;
+}
+
+.public-hero-card {
+  min-height: 580px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.public-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: min(620px, 100%);
+  padding: 32px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(24, 14, 10, 0.18), rgba(24, 14, 10, 0.58));
+  color: #fff8f1;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+}
+
+.public-kicker {
+  margin-bottom: 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 239, 225, 0.82);
+}
+
+.public-hero-copy h1 {
+  font-size: clamp(2.4rem, 4vw, 4rem);
+  line-height: 1.02;
+  margin-bottom: 14px;
+}
+
+.public-hero-copy p:not(.public-kicker) {
+  color: rgba(255, 248, 241, 0.86);
+  line-height: 1.7;
+  margin-bottom: 0;
+}
+
+.public-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.public-link-button {
+  text-decoration: none;
+}
+
+.public-section {
+  background: rgba(255, 250, 245, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 30px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.public-section-heading {
+  margin-bottom: 18px;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.portfolio-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  gap: 8px;
+  padding: 22px;
+  border-radius: 24px;
+  border: none;
+  text-decoration: none;
+  color: #fff9f4;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 20px 44px rgba(36, 18, 9, 0.18);
+  text-align: left;
+}
+
+.portfolio-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(18, 10, 7, 0.08), rgba(18, 10, 7, 0.7));
+}
+
+.portfolio-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.portfolio-card-tag {
+  align-self: start;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 250, 245, 0.2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.portfolio-card strong {
+  font-size: 1.45rem;
+}
+
+.portfolio-card p {
+  margin: 0;
+  color: rgba(255, 248, 241, 0.9);
+}
+
+.portfolio-card-wedding {
+  background-image: url("assets/hero-wedding.jpg");
+}
+
+.portfolio-card-couple {
+  background-image: url("assets/feature-couple.jpg");
+}
+
+.portfolio-card-organize {
+  background-image: url("assets/calendar-portrait.jpg");
+  background-position: center 30%;
+}
+
+.portfolio-card-dashboard {
+  background-image: url("assets/feature-color.jpg");
+  background-position: center;
 }
 
 .page-shell {
@@ -833,6 +1023,14 @@ textarea {
 }
 
 @media (max-width: 980px) {
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-hero-card {
+    min-height: 500px;
+  }
+
   .hero,
   .layout,
   .two-column-form,
@@ -855,6 +1053,25 @@ textarea {
 @media (max-width: 720px) {
   .auth-card {
     padding: 24px;
+  }
+
+  .public-shell {
+    width: min(100% - 20px, 1320px);
+    padding-top: 20px;
+  }
+
+  .public-topbar {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .public-hero-card {
+    min-height: 440px;
+    padding: 18px;
+  }
+
+  .public-hero-copy {
+    padding: 22px;
   }
 
   .page-shell {

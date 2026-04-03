@@ -92,6 +92,7 @@ const totalProfit = document.querySelector("#totalProfit");
 const editorDue = document.querySelector("#editorDue");
 const teamDue = document.querySelector("#teamDue");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
+const publicShell = document.querySelector("#publicShell");
 const appShell = document.querySelector("#appShell");
 const authShell = document.querySelector("#authShell");
 const authForm = document.querySelector("#authForm");
@@ -103,6 +104,9 @@ const authSubmitButton = document.querySelector("#authSubmitButton");
 const logoutButton = document.querySelector("#logoutButton");
 const accountEmail = document.querySelector("#accountEmail");
 const syncStatus = document.querySelector("#syncStatus");
+const authCloseButton = document.querySelector("#authCloseButton");
+const authBackdrop = document.querySelector("#authBackdrop");
+const openAuthButtons = document.querySelectorAll(".open-auth-button");
 let brandHeroIntervalId = null;
 let brandHeroSignature = "";
 let authMode = "login";
@@ -128,6 +132,17 @@ leadForm.addEventListener("submit", handleLeadSubmit);
 weddingForm.addEventListener("submit", handleWeddingSubmit);
 shootShareForm.addEventListener("submit", handleShootShareSubmit);
 editorForm.addEventListener("submit", handleEditorSubmit);
+authForm.addEventListener("submit", handleAuthSubmit);
+authModeToggle.addEventListener("click", toggleAuthMode);
+logoutButton.addEventListener("click", handleLogout);
+authCloseButton.addEventListener("click", hideAuthShell);
+authBackdrop.addEventListener("click", hideAuthShell);
+openAuthButtons.forEach((button) => button.addEventListener("click", () => {
+  clearAuthMessage();
+  authMode = "login";
+  syncAuthMode();
+  showAuthShell();
+}));
 
 statusFilter.addEventListener("change", renderLeads);
 leadSearchInput.addEventListener("input", renderLeads);
@@ -170,15 +185,13 @@ shootShareForm.elements.time.addEventListener("input", syncShootShareAvailabilit
 shootShareForm.elements.ratePerHour.addEventListener("input", syncShootSharePaymentFields);
 shootShareForm.elements.totalHours.addEventListener("input", syncShootSharePaymentFields);
 shootShareForm.elements.paymentReceived.addEventListener("input", syncShootSharePaymentFields);
-authForm.addEventListener("submit", handleAuthSubmit);
-authModeToggle.addEventListener("click", toggleAuthMode);
-logoutButton.addEventListener("click", handleLogout);
 
 renderCalendarWeekdays();
 initializeBrandHeroSlideshow();
 setActiveTab(getRequestedTab());
 initializeForms();
 renderAll();
+syncAuthMode();
 initializeApp();
 
 function createEmptyState() {
@@ -286,6 +299,9 @@ async function persistState() {
     showAuthMessage("Your session expired. Please sign in again.");
     authMode = "login";
     syncAuthMode();
+    currentUser = null;
+    accountEmail.textContent = "Not signed in";
+    showPublicLanding();
     showAuthShell();
   }
 }
@@ -322,19 +338,29 @@ async function initializeApp() {
     showAppShell();
     await loadRemoteState();
   } catch {
-    showAuthShell();
+    showPublicLanding();
     setSyncStatus("Sign in required");
   }
 }
 
 function showAppShell() {
   appShell.classList.remove("hidden");
-  authShell.classList.add("hidden");
+  publicShell.classList.add("hidden");
+  hideAuthShell();
 }
 
 function showAuthShell() {
   authShell.classList.remove("hidden");
+}
+
+function hideAuthShell() {
+  authShell.classList.add("hidden");
+}
+
+function showPublicLanding() {
+  publicShell.classList.remove("hidden");
   appShell.classList.add("hidden");
+  hideAuthShell();
 }
 
 function showAuthMessage(message) {
@@ -409,7 +435,7 @@ async function handleLogout() {
     accountEmail.textContent = "Not signed in";
     state = createEmptyState();
     renderAll();
-    showAuthShell();
+    showPublicLanding();
     clearAuthMessage();
     setSyncStatus("Signed out");
   }
