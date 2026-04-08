@@ -1143,7 +1143,6 @@ function buildScheduleItems() {
         .join("<br><br>"),
       meta: [
         { label: "Location", value: entry.eventLocation || plan.location || "Not added" },
-        { label: "Covered Hours", value: formatCoveredHours(entry.coveredHours) },
         { label: "Package", value: plan.packageType || "Not added" },
         { label: "Team", value: formatTeamAssignments(entry.teamAssignments) }
       ]
@@ -1739,7 +1738,6 @@ function normalizeWeddingEvent(event, inheritedAssignments = []) {
   return {
     ...event,
     id: event.id || crypto.randomUUID(),
-    coveredHours: parseOptionalNumber(event.coveredHours),
     eventNotes: event.eventNotes || "",
     teamAssignments: Array.isArray(event.teamAssignments)
       ? normalizeTeamAssignments(event)
@@ -1860,7 +1858,6 @@ function addWeddingEventRow(values = {}) {
   item.querySelector('[data-name="eventDate"]').value = values.eventDate || "";
   item.querySelector('[data-name="eventTime"]').value = values.eventTime || "";
   item.querySelector('[data-name="eventLocation"]').value = values.eventLocation || "";
-  item.querySelector('[data-name="coveredHours"]').value = values.coveredHours ?? "";
   item.querySelector('[data-name="eventNotes"]').value = values.eventNotes || "";
   (values.teamAssignments || []).forEach((assignment) => addTeamMemberRow(eventTeamList, assignment));
   if (!eventTeamList.children.length) addTeamMemberRow(eventTeamList);
@@ -1880,7 +1877,6 @@ function readWeddingEventRows() {
       eventDate: row.querySelector('[data-name="eventDate"]').value,
       eventTime: row.querySelector('[data-name="eventTime"]').value.trim(),
       eventLocation: row.querySelector('[data-name="eventLocation"]').value.trim(),
-      coveredHours: parseOptionalNumber(row.querySelector('[data-name="coveredHours"]').value),
       eventNotes: row.querySelector('[data-name="eventNotes"]').value.trim(),
       teamAssignments: readTeamRows(row.querySelector(".event-team-list"))
     }))
@@ -2131,10 +2127,6 @@ function formatTeamAssignments(assignments) {
       return `${label} (${item.hours || 0}h x ${formatCurrency(item.rate)} = ${formatCurrency(item.amount)}, ${item.paymentStatus || "Pending"}, ${item.dataSharedStatus || "Not Shared"})`;
     })
     .join(", ");
-}
-
-function formatCoveredHours(hours) {
-  return hours === null || hours === undefined || hours === "" || Number(hours) === 0 ? "Add after event" : String(hours);
 }
 
 function sumTeamAssignments(assignments) {
