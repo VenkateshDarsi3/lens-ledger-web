@@ -505,6 +505,54 @@ button:disabled {
   margin-top: 18px;
 }
 
+.overview-search-panel {
+  margin-top: 18px;
+}
+
+.overview-search-empty {
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+.overview-search-results {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.overview-search-result {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(118, 78, 53, 0.12);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  color: var(--text);
+}
+
+.overview-search-result strong {
+  font-size: 1.05rem;
+}
+
+.overview-search-result span:last-child {
+  color: var(--muted);
+}
+
+.overview-search-result-type {
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(184, 92, 52, 0.1);
+  color: var(--accent-deep);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .overview-money-heading {
   display: flex;
   justify-content: space-between;
@@ -590,6 +638,51 @@ button:disabled {
 .overview-spend-row:first-child {
   border-top: none;
   padding-top: 0;
+}
+
+.payment-timeline {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(118, 78, 53, 0.12);
+}
+
+.payment-timeline-title {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.payment-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.payment-timeline-item {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 250, 245, 0.86);
+  border: 1px solid rgba(118, 78, 53, 0.1);
+}
+
+.payment-timeline-item span,
+.payment-timeline-item strong,
+.payment-timeline-item small {
+  display: block;
+}
+
+.payment-timeline-item span {
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.payment-timeline-item strong {
+  margin-bottom: 4px;
+}
+
+.payment-timeline-item small {
+  color: var(--muted);
 }
 
 .stat-card {

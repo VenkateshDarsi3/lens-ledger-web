@@ -125,6 +125,19 @@
             </article>
           </section>
 
+          <section class="panel overview-search-panel">
+            <div class="panel-heading">
+              <h2>Quick Search</h2>
+              <p>Find clients, weddings, editors, teammates, dates, and locations from one place.</p>
+            </div>
+            <label>
+              Search everything
+              <input type="search" id="globalSearchInput" placeholder="Client, phone, event, teammate, editor, location..." />
+            </label>
+            <p id="globalSearchEmptyState" class="overview-search-empty">Start typing to search across all records.</p>
+            <div id="globalSearchResults" class="overview-search-results hidden"></div>
+          </section>
+
           <section class="panel overview-money-panel">
             <div class="panel-heading overview-money-heading">
               <div>
@@ -371,6 +384,26 @@
                 <label>
                   Advance Given
                   <input type="number" name="advanceGiven" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Advance Date
+                  <input type="date" name="advanceDate" />
+                </label>
+                <label>
+                  Second Payment
+                  <input type="number" name="secondPayment" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Second Payment Date
+                  <input type="date" name="secondPaymentDate" />
+                </label>
+                <label>
+                  Final Payment
+                  <input type="number" name="finalPayment" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Final Payment Date
+                  <input type="date" name="finalPaymentDate" />
                 </label>
                 <label>
                   Pending Amount

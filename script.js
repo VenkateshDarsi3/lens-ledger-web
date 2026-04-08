@@ -83,6 +83,9 @@ const calendarPrevButton = document.querySelector("#calendarPrevButton");
 const calendarNextButton = document.querySelector("#calendarNextButton");
 const overviewMonthInput = document.querySelector("#overviewMonthInput");
 const addBankAccountButton = document.querySelector("#addBankAccountButton");
+const globalSearchInput = document.querySelector("#globalSearchInput");
+const globalSearchResults = document.querySelector("#globalSearchResults");
+const globalSearchEmptyState = document.querySelector("#globalSearchEmptyState");
 
 const leadCardTemplate = document.querySelector("#leadCardTemplate");
 const scheduleCardTemplate = document.querySelector("#scheduleCardTemplate");
@@ -183,6 +186,7 @@ addBankAccountButton?.addEventListener("click", () => {
   renderStats();
   saveState();
 });
+globalSearchInput?.addEventListener("input", renderGlobalSearch);
 overviewMonthInput?.addEventListener("change", (event) => {
   overviewMonthCursor = event.target.value || formatMonthValue(new Date());
   renderMonthlySpend();
@@ -209,6 +213,8 @@ weddingForm.elements.weddingDate.addEventListener("input", () => {
 weddingForm.elements.pricePerHour.addEventListener("input", syncWeddingPaymentFields);
 weddingForm.elements.expectedHours.addEventListener("input", syncWeddingPaymentFields);
 weddingForm.elements.advanceGiven.addEventListener("input", syncWeddingPaymentFields);
+weddingForm.elements.secondPayment.addEventListener("input", syncWeddingPaymentFields);
+weddingForm.elements.finalPayment.addEventListener("input", syncWeddingPaymentFields);
 shootShareForm.elements.date.addEventListener("input", syncShootShareAvailability);
 shootShareForm.elements.time.addEventListener("input", syncShootShareAvailability);
 shootShareForm.elements.ratePerHour.addEventListener("input", syncShootSharePaymentFields);
@@ -361,6 +367,7 @@ function renderAll() {
   renderEditorJobs();
   renderOverviewBankAccounts();
   renderStats();
+  renderGlobalSearch();
 }
 
 async function initializeApp() {
@@ -690,8 +697,13 @@ function handleWeddingSubmit(event) {
     expectedCrowd: Number(formData.get("expectedCrowd")) || 0,
     liveLink: formData.get("liveLink").trim(),
     advanceGiven: Number(formData.get("advanceGiven")) || 0,
+    advanceDate: formData.get("advanceDate"),
+    secondPayment: Number(formData.get("secondPayment")) || 0,
+    secondPaymentDate: formData.get("secondPaymentDate"),
+    finalPayment: Number(formData.get("finalPayment")) || 0,
+    finalPaymentDate: formData.get("finalPaymentDate"),
     pendingAmount: Number(formData.get("pendingAmount")) || 0,
-    isFullyPaid: existingPlan ? Boolean(existingPlan.isFullyPaid) : false,
+    isFullyPaid: Number(formData.get("pendingAmount")) <= 0,
     hasPreWedding: hasPreWeddingCheckbox.checked,
     preWeddingDate: hasPreWeddingCheckbox.checked ? formData.get("preWeddingDate") : "",
     reviewNotes: formData.get("reviewNotes").trim(),
@@ -857,8 +869,11 @@ function renderWeddingPlans() {
       createMetaItem("Actual Total", formatCurrency(getWeddingActualAmount(plan))),
       createMetaItem("Pre-Wedding", plan.hasPreWedding ? formatDate(plan.preWeddingDate) : "No"),
       createMetaItem("Advance", formatCurrency(plan.advanceGiven)),
+      createMetaItem("Second Payment", formatCurrency(plan.secondPayment)),
+      createMetaItem("Final Payment", formatCurrency(plan.finalPayment)),
+      createMetaItem("Received", formatCurrency(getWeddingTotalReceived(plan))),
       createMetaItem("Pending", formatCurrency(plan.pendingAmount)),
-      createMetaItem("Payment", plan.isFullyPaid ? "Fully Paid" : "Pending"),
+      createMetaItem("Payment", getWeddingPaymentStatus(plan)),
       createMetaItem("Team", PER_EVENT_TEAM_MESSAGE)
     ].join("");
 
@@ -1257,9 +1272,11 @@ function updateWeddingActualHours(id, totalHours) {
   state.weddingPlans = state.weddingPlans.map((plan) => {
     if (plan.id !== id) return plan;
     const nextPlan = { ...plan, totalHours };
+    const pendingAmount = Math.max(getWeddingActualAmount(nextPlan) - getWeddingTotalReceived(nextPlan), 0);
     return {
       ...nextPlan,
-      pendingAmount: Math.max(getWeddingActualAmount(nextPlan) - Number(nextPlan.advanceGiven || 0), 0)
+      pendingAmount,
+      isFullyPaid: pendingAmount <= 0
     };
   });
 
@@ -1358,6 +1375,11 @@ function populateWeddingForm(plan) {
   weddingForm.elements.expectedCrowd.value = plan.expectedCrowd || "";
   weddingForm.elements.liveLink.value = plan.liveLink || "";
   weddingForm.elements.advanceGiven.value = plan.advanceGiven || "";
+  weddingForm.elements.advanceDate.value = plan.advanceDate || "";
+  weddingForm.elements.secondPayment.value = plan.secondPayment || "";
+  weddingForm.elements.secondPaymentDate.value = plan.secondPaymentDate || "";
+  weddingForm.elements.finalPayment.value = plan.finalPayment || "";
+  weddingForm.elements.finalPaymentDate.value = plan.finalPaymentDate || "";
   weddingForm.elements.pendingAmount.value = plan.pendingAmount || "";
   hasPreWeddingCheckbox.checked = Boolean(plan.hasPreWedding);
   weddingForm.elements.preWeddingDate.value = plan.preWeddingDate || "";
@@ -1491,8 +1513,11 @@ function syncLeadAvailability() {
 function syncWeddingPaymentFields() {
   const total = (Number(weddingForm.elements.pricePerHour.value) || 0) * (Number(weddingForm.elements.expectedHours.value) || 0);
   const advance = Number(weddingForm.elements.advanceGiven.value) || 0;
+  const secondPayment = Number(weddingForm.elements.secondPayment.value) || 0;
+  const finalPayment = Number(weddingForm.elements.finalPayment.value) || 0;
+  const received = advance + secondPayment + finalPayment;
   weddingForm.elements.totalAmount.value = total ? String(total) : "";
-  weddingForm.elements.pendingAmount.value = String(Math.max(total - advance, 0));
+  weddingForm.elements.pendingAmount.value = String(Math.max(total - received, 0));
 }
 
 function syncWeddingAvailability() {
@@ -1633,6 +1658,135 @@ function matchesLeadSearch(lead, searchTerm) {
   return haystack.includes(searchTerm);
 }
 
+function buildGlobalSearchResults(searchTerm) {
+  if (!searchTerm) return [];
+
+  const normalizedSearch = searchTerm.toLowerCase();
+  const results = [];
+
+  state.leads.forEach((lead) => {
+    if (matchesLeadSearch(lead, normalizedSearch)) {
+      results.push({
+        id: `lead-${lead.id}`,
+        tab: "pipeline",
+        type: lead.source === "wedding-plan" ? "Wedding Booking" : "Event Detail",
+        title: `${lead.clientName} - ${lead.eventType}`,
+        subtitle: [formatDate(lead.eventDate), lead.location || lead.contact || "No extra details"].filter(Boolean).join(" | ")
+      });
+    }
+  });
+
+  state.weddingPlans.forEach((plan) => {
+    const eventNames = (plan.events || []).map((entry) => entry.eventName);
+    const teammateNames = (plan.events || []).flatMap((entry) => (entry.teamAssignments || []).map((item) => item.name));
+    const haystack = [
+      plan.clientName,
+      plan.phone,
+      plan.location,
+      plan.packageType,
+      plan.deliverables,
+      plan.reviewNotes,
+      plan.liveLink,
+      plan.weddingDate,
+      plan.preWeddingDate,
+      ...eventNames,
+      ...teammateNames
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (haystack.includes(normalizedSearch)) {
+      results.push({
+        id: `wedding-${plan.id}`,
+        tab: "weddings",
+        type: "Wedding Plan",
+        title: `${plan.clientName} Wedding`,
+        subtitle: [formatDate(plan.weddingDate), plan.location || "No location", eventNames.slice(0, 3).join(", ")].filter(Boolean).join(" | ")
+      });
+    }
+  });
+
+  state.shootShareJobs.forEach((job) => {
+    const haystack = [job.forPhotographer, job.location, job.date, job.time]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    if (haystack.includes(normalizedSearch)) {
+      results.push({
+        id: `shoot-${job.id}`,
+        tab: "shoot-share",
+        type: "Shoot & Share",
+        title: job.forPhotographer || "Shoot & Share Job",
+        subtitle: [formatDate(job.date), job.location || "No location"].filter(Boolean).join(" | ")
+      });
+    }
+  });
+
+  state.editorJobs.forEach((job) => {
+    const haystack = [
+      job.projectName,
+      job.editorName,
+      job.dueDate,
+      ...(job.deliverables || []).flatMap((item) => [item.type, item.customName, item.status])
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    if (haystack.includes(normalizedSearch)) {
+      results.push({
+        id: `editor-${job.id}`,
+        tab: "editor",
+        type: "Editor Job",
+        title: job.projectName || "Editor Job",
+        subtitle: [job.editorName || "No editor", formatDate(job.dueDate)].filter(Boolean).join(" | ")
+      });
+    }
+  });
+
+  return results.slice(0, 12);
+}
+
+function renderGlobalSearch() {
+  if (!globalSearchInput || !globalSearchResults || !globalSearchEmptyState) return;
+
+  const searchTerm = globalSearchInput.value.trim();
+  const results = buildGlobalSearchResults(searchTerm);
+  const hasSearch = Boolean(searchTerm);
+
+  globalSearchEmptyState.classList.toggle("hidden", hasSearch);
+  globalSearchResults.classList.toggle("hidden", !hasSearch);
+
+  if (!hasSearch) {
+    globalSearchEmptyState.textContent = "Start typing to search across all records.";
+    globalSearchResults.innerHTML = "";
+    return;
+  }
+
+  if (!results.length) {
+    globalSearchEmptyState.classList.remove("hidden");
+    globalSearchResults.classList.add("hidden");
+    globalSearchEmptyState.textContent = "No matching records found.";
+    globalSearchResults.innerHTML = "";
+    return;
+  }
+
+  globalSearchResults.classList.remove("hidden");
+  globalSearchResults.innerHTML = results.map((result) => `
+    <button type="button" class="overview-search-result" data-tab="${escapeHtml(result.tab)}">
+      <span class="overview-search-result-type">${escapeHtml(result.type)}</span>
+      <strong>${escapeHtml(result.title)}</strong>
+      <span>${escapeHtml(result.subtitle)}</span>
+    </button>
+  `).join("");
+
+  globalSearchResults.querySelectorAll(".overview-search-result").forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveTab(button.dataset.tab);
+    });
+  });
+}
+
 function buildConflictMessage(excludeIds, date, time) {
   const conflicts = findScheduleConflicts({
     date,
@@ -1680,6 +1834,11 @@ function normalizeWeddingPlan(plan) {
     expectedCrowd: Number(plan.expectedCrowd) || 0,
     liveLink: plan.liveLink || "",
     advanceGiven: Number(plan.advanceGiven) || 0,
+    advanceDate: plan.advanceDate || "",
+    secondPayment: Number(plan.secondPayment) || 0,
+    secondPaymentDate: plan.secondPaymentDate || "",
+    finalPayment: Number(plan.finalPayment) || 0,
+    finalPaymentDate: plan.finalPaymentDate || "",
     pendingAmount: Number(plan.pendingAmount) || 0,
     isFullyPaid: Boolean(plan.isFullyPaid),
     hasPreWedding: Boolean(plan.hasPreWedding),
@@ -2052,6 +2211,16 @@ function formatMoney(amount, currency = "USD") {
 function renderWeddingNotes(plan) {
   const notes = escapeHtml(plan.reviewNotes || "No review notes added yet.");
   const liveLink = plan.liveLink ? `<br><br><a href="${plan.liveLink}" target="_blank" rel="noreferrer">Open live link</a>` : "";
+  const paymentTimeline = `
+    <div class="payment-timeline">
+      <strong class="payment-timeline-title">Payment Timeline</strong>
+      <div class="payment-timeline-grid">
+        ${renderPaymentTimelineItem("Advance", plan.advanceGiven, plan.advanceDate)}
+        ${renderPaymentTimelineItem("Second Payment", plan.secondPayment, plan.secondPaymentDate)}
+        ${renderPaymentTimelineItem("Final Payment", plan.finalPayment, plan.finalPaymentDate)}
+      </div>
+    </div>
+  `;
   const actualHoursControl = `
     <div class="summary-field-row">
       <label>
@@ -2069,7 +2238,7 @@ function renderWeddingNotes(plan) {
     </div>
   `;
   const teamManager = renderWeddingTeamManager(plan);
-  return `${notes}${liveLink}${actualHoursControl}${paymentToggle}${teamManager}`;
+  return `${notes}${liveLink}${paymentTimeline}${actualHoursControl}${paymentToggle}${teamManager}`;
 }
 
 function getWeddingExpectedAmount(plan) {
@@ -2082,6 +2251,24 @@ function getWeddingActualAmount(plan) {
 
 function getWeddingCurrentAmount(plan) {
   return Number(plan.totalHours) > 0 ? getWeddingActualAmount(plan) : getWeddingExpectedAmount(plan);
+}
+
+function getWeddingTotalReceived(plan) {
+  return (Number(plan.advanceGiven) || 0) + (Number(plan.secondPayment) || 0) + (Number(plan.finalPayment) || 0);
+}
+
+function getWeddingPaymentStatus(plan) {
+  return plan.isFullyPaid || Number(plan.pendingAmount || 0) <= 0 ? "Fully Paid" : "Pending";
+}
+
+function renderPaymentTimelineItem(label, amount, date) {
+  return `
+    <div class="payment-timeline-item">
+      <span>${escapeHtml(label)}</span>
+      <strong>${formatCurrency(amount)}</strong>
+      <small>${date ? formatDate(date) : "Date not added"}</small>
+    </div>
+  `;
 }
 
 function formatTeamAssignments(assignments) {
