@@ -188,7 +188,7 @@
             <section class="panel form-panel">
               <div class="panel-heading">
                 <h2>Add Client</h2>
-                <p>Save a new enquiry, follow-up, or confirmed booking in dollars.</p>
+                <p>Save a new enquiry, follow-up, or confirmed booking for non-wedding events in dollars.</p>
               </div>
 
               <form id="leadForm" class="lead-form">
@@ -206,7 +206,6 @@
                 <label>
                   Event type
                   <select name="eventType" id="eventTypeSelect" required>
-                    <option value="Wedding">Wedding</option>
                     <option value="Engagement">Engagement</option>
                     <option value="Birthday">Birthday</option>
                     <option value="Maternity">Maternity</option>
@@ -295,7 +294,7 @@
               <div class="panel-heading board-header">
                 <div>
                   <h2>Event Details</h2>
-                  <p>Entries are automatically sorted by the nearest event date first.</p>
+                  <p>Track non-wedding events here. Entries are automatically sorted by the nearest event date first.</p>
                 </div>
                 <label class="filter-label">
                   Search
@@ -739,6 +738,20 @@
           <label>
             Per Hour Rate
             <input type="number" data-name="memberRate" min="0" step="1" placeholder="0" />
+          </label>
+          <label>
+            Payment Status
+            <select data-name="memberPaymentStatus">
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </label>
+          <label>
+            Data Shared
+            <select data-name="memberDataSharedStatus">
+              <option value="Not Shared">Not Shared</option>
+              <option value="Shared">Shared</option>
+            </select>
           </label>
         </div>
         <button type="button" class="delete-button remove-team-button">Remove</button>

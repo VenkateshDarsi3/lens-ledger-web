@@ -788,6 +788,7 @@ function renderLeads() {
   const items = (selectedStatus === "All"
     ? state.leads
     : state.leads.filter((lead) => lead.status === selectedStatus))
+    .filter((lead) => isNonWeddingLead(lead))
     .filter((lead) => matchesLeadSearch(lead, searchTerm))
     .slice()
     .sort(compareLeadDates);
@@ -1070,7 +1071,9 @@ function renderEditorJobs() {
 
 function renderStats() {
   const confirmedStatuses = new Set(["Confirmed", "Completed"]);
-  const revenue = state.leads.reduce((sum, lead) => confirmedStatuses.has(lead.status) ? sum + Number(lead.amount || 0) : sum, 0);
+  const leadRevenue = state.leads.reduce((sum, lead) => confirmedStatuses.has(lead.status) ? sum + Number(lead.amount || 0) : sum, 0);
+  const shootShareRevenue = state.shootShareJobs.reduce((sum, job) => sum + Number(job.totalAmount || 0), 0);
+  const revenue = leadRevenue + shootShareRevenue;
   const totalEditorCost = state.editorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
   const hasNonUsdEditorAmounts = state.editorJobs.some((job) => Number(job.amountDue || 0) > 0 && (job.currency || "USD") !== "USD");
   const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && Number(job.amountDue || 0) > 0);
@@ -1336,7 +1339,7 @@ function populateLeadForm(lead) {
   leadForm.elements.clientName.value = lead.clientName || "";
   leadForm.elements.contact.value = lead.contact || "";
   if (isDefaultEventType(lead.eventType)) {
-    leadForm.elements.eventType.value = lead.eventType || "Wedding";
+    leadForm.elements.eventType.value = lead.eventType || "Engagement";
     leadForm.elements.customEventType.value = "";
   } else {
     leadForm.elements.eventType.value = "Other";
@@ -1437,7 +1440,7 @@ function resetLeadForm() {
   leadForm.elements.leadId.value = "";
   leadTeamList.innerHTML = "";
   addTeamMemberRow(leadTeamList);
-  leadForm.elements.eventType.value = "Wedding";
+  leadForm.elements.eventType.value = "Engagement";
   leadForm.elements.customEventType.value = "";
   leadForm.elements.serviceType.value = "Photography";
   leadForm.elements.status.value = "Enquiry";
@@ -1819,7 +1822,15 @@ function normalizeLead(lead) {
 }
 
 function isDefaultEventType(value) {
-  return ["Wedding", "Engagement", "Birthday", "Maternity", "Corporate", "Portrait", "Other"].includes(value);
+  return ["Engagement", "Birthday", "Maternity", "Corporate", "Portrait", "Other"].includes(value);
+}
+
+function isWeddingEventType(value) {
+  return String(value || "").trim().toLowerCase() === "wedding";
+}
+
+function isNonWeddingLead(lead) {
+  return lead.source === "manual" && !isWeddingEventType(lead.eventType);
 }
 
 function normalizeWeddingPlan(plan) {
@@ -1957,9 +1968,13 @@ function addTeamMemberRow(container, values = {}) {
   const item = fragment.querySelector(".team-member-item");
   const nameInput = item.querySelector('[data-name="memberName"]');
   const rateInput = item.querySelector('[data-name="memberRate"]');
+  const paymentStatusSelect = item.querySelector('[data-name="memberPaymentStatus"]');
+  const dataSharedSelect = item.querySelector('[data-name="memberDataSharedStatus"]');
 
   nameInput.value = values.name || "";
   rateInput.value = values.rate || "";
+  paymentStatusSelect.value = values.paymentStatus || (values.paid ? "Completed" : "Pending");
+  dataSharedSelect.value = values.dataSharedStatus || (values.dataShared ? "Shared" : "Not Shared");
 
   item.querySelector(".remove-team-button").addEventListener("click", () => {
     item.remove();
@@ -1976,9 +1991,12 @@ function readTeamRows(container) {
       hours: null,
       rate: Number(row.querySelector('[data-name="memberRate"]').value) || 0,
       amount: null,
-      paid: false,
-      paymentStatus: "Pending",
-      dataSharedStatus: "Not Shared"
+      paymentStatus: row.querySelector('[data-name="memberPaymentStatus"]').value || "Pending",
+      dataSharedStatus: row.querySelector('[data-name="memberDataSharedStatus"]').value || "Not Shared"
+    }))
+    .map((item) => ({
+      ...item,
+      paid: item.paymentStatus === "Completed"
     }))
     .filter((item) => item.name || item.rate);
 }
