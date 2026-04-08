@@ -7,13 +7,15 @@ import json
 import mimetypes
 import os
 import secrets
+import smtplib
 import sqlite3
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -23,6 +25,7 @@ DB_PATH = DATA_DIR / "lens_ledger.sqlite3"
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SESSION_COOKIE = "lens_ledger_session"
 SESSION_DAYS = 14
+RESET_TOKEN_HOURS = 2
 DEFAULT_SLIDES = [
     {"url": "/assets/feature-couple.jpg", "position": "center center"},
     {"url": "/assets/hero-wedding.jpg", "position": "center 38%"},
@@ -78,6 +81,17 @@ def ensure_database() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+              token TEXT PRIMARY KEY,
+              user_id INTEGER NOT NULL,
+              expires_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
         connection.commit()
 
 
@@ -123,6 +137,103 @@ def create_session(connection: sqlite3.Connection, user_id: int) -> tuple[str, d
     )
     connection.commit()
     return token, expires_at
+
+
+def cleanup_expired_reset_tokens(connection: sqlite3.Connection) -> None:
+    connection.execute("DELETE FROM password_reset_tokens WHERE expires_at <= ?", (isoformat(now_utc()),))
+    connection.commit()
+
+
+def create_password_reset_token(connection: sqlite3.Connection, user_id: int) -> tuple[str, datetime]:
+    cleanup_expired_reset_tokens(connection)
+    connection.execute("DELETE FROM password_reset_tokens WHERE user_id = ?", (user_id,))
+    token = secrets.token_urlsafe(32)
+    expires_at = now_utc() + timedelta(hours=RESET_TOKEN_HOURS)
+    connection.execute(
+        """
+        INSERT INTO password_reset_tokens (token, user_id, expires_at, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (token, user_id, isoformat(expires_at), isoformat(now_utc())),
+    )
+    connection.commit()
+    return token, expires_at
+
+
+def get_password_reset_record(connection: sqlite3.Connection, token: str) -> sqlite3.Row | None:
+    cleanup_expired_reset_tokens(connection)
+    row = connection.execute(
+        """
+        SELECT password_reset_tokens.token, password_reset_tokens.user_id, password_reset_tokens.expires_at, users.email
+        FROM password_reset_tokens
+        JOIN users ON users.id = password_reset_tokens.user_id
+        WHERE password_reset_tokens.token = ?
+        """,
+        (token,),
+    ).fetchone()
+    if row is None:
+        return None
+    if parse_iso(row["expires_at"]) <= now_utc():
+        connection.execute("DELETE FROM password_reset_tokens WHERE token = ?", (token,))
+        connection.commit()
+        return None
+    return row
+
+
+def get_public_base_url(handler: "LensLedgerHandler") -> str:
+    configured = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+
+    forwarded_proto = handler.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
+    secure_cookie = os.getenv("COOKIE_SECURE", "0") == "1"
+    scheme = forwarded_proto or ("https" if secure_cookie else "http")
+    host = handler.headers.get("Host", f"localhost:{os.getenv('PORT', '8000')}")
+    return f"{scheme}://{host}"
+
+
+def send_password_reset_email(email_address: str, reset_link: str) -> None:
+    smtp_host = os.getenv("SMTP_HOST", "").strip()
+    smtp_username = os.getenv("SMTP_USERNAME", "").strip()
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+    smtp_from = os.getenv("SMTP_FROM", "").strip() or smtp_username
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_use_ssl = os.getenv("SMTP_USE_SSL", "0") == "1"
+    smtp_use_tls = os.getenv("SMTP_USE_TLS", "1") == "1"
+
+    if not smtp_host or not smtp_from:
+        raise RuntimeError("Password reset email is not configured yet.")
+
+    message = EmailMessage()
+    message["Subject"] = "Reset your Lens Ledger password"
+    message["From"] = smtp_from
+    message["To"] = email_address
+    message.set_content(
+        "\n".join(
+            [
+                "A password reset was requested for your Lens Ledger account.",
+                "",
+                f"Use this link to reset your password: {reset_link}",
+                "",
+                f"This link expires in {RESET_TOKEN_HOURS} hours.",
+                "If you did not request this, you can ignore this email.",
+            ]
+        )
+    )
+
+    if smtp_use_ssl:
+        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
+            if smtp_username:
+                server.login(smtp_username, smtp_password)
+            server.send_message(message)
+        return
+
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+        if smtp_use_tls:
+            server.starttls()
+        if smtp_username:
+            server.login(smtp_username, smtp_password)
+        server.send_message(message)
 
 
 def get_user_from_session(handler: "LensLedgerHandler") -> sqlite3.Row | None:
@@ -186,6 +297,9 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/session":
             self.handle_session_get()
             return
+        if parsed.path == "/api/auth/reset-password":
+            self.handle_reset_password_get(parsed)
+            return
         if parsed.path == "/api/state":
             self.handle_state_get()
             return
@@ -206,6 +320,12 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/auth/login":
             self.handle_login()
+            return
+        if parsed.path == "/api/auth/forgot-password":
+            self.handle_forgot_password()
+            return
+        if parsed.path == "/api/auth/reset-password":
+            self.handle_reset_password()
             return
         if parsed.path == "/api/auth/logout":
             self.handle_logout()
@@ -325,6 +445,88 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def handle_forgot_password(self) -> None:
+        try:
+            payload = read_json_body(self)
+        except ValueError as error:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(error))
+            return
+
+        email = str(payload.get("email", "")).strip().lower()
+        if not email or "@" not in email:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Enter a valid email address.")
+            return
+
+        with db_connection() as connection:
+            row = connection.execute("SELECT id, email FROM users WHERE email = ?", (email,)).fetchone()
+            if row is None:
+                self.send_json(
+                    {"message": "If an account exists for that email, a reset link has been sent."},
+                    status=HTTPStatus.OK,
+                )
+                return
+
+            token, _ = create_password_reset_token(connection, row["id"])
+
+        reset_link = f"{get_public_base_url(self)}/?reset={quote(token)}"
+
+        try:
+            send_password_reset_email(email, reset_link)
+        except Exception as error:
+            print(f"Password reset email failed for {email}: {error}")
+            print(f"Password reset fallback link for {email}: {reset_link}")
+            self.send_error_json(HTTPStatus.SERVICE_UNAVAILABLE, str(error))
+            return
+
+        self.send_json({"message": "If an account exists for that email, a reset link has been sent."}, status=HTTPStatus.OK)
+
+    def handle_reset_password_get(self, parsed) -> None:
+        token = parse_qs(parsed.query).get("token", [""])[0].strip()
+        if not token:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Reset token is required.")
+            return
+
+        with db_connection() as connection:
+            row = get_password_reset_record(connection, token)
+
+        if row is None:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "That reset link is invalid or has expired.")
+            return
+
+        self.send_json({"ok": True, "email": row["email"]})
+
+    def handle_reset_password(self) -> None:
+        try:
+            payload = read_json_body(self)
+        except ValueError as error:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(error))
+            return
+
+        token = str(payload.get("token", "")).strip()
+        password = str(payload.get("password", ""))
+        if not token:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Reset token is required.")
+            return
+        if len(password) < 8:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Password must be at least 8 characters.")
+            return
+
+        with db_connection() as connection:
+            row = get_password_reset_record(connection, token)
+            if row is None:
+                self.send_error_json(HTTPStatus.BAD_REQUEST, "That reset link is invalid or has expired.")
+                return
+
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (password_hash(password), row["user_id"]),
+            )
+            connection.execute("DELETE FROM password_reset_tokens WHERE user_id = ?", (row["user_id"],))
+            connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["user_id"],))
+            connection.commit()
+
+        self.send_json({"message": "Your password has been updated. Please sign in again."}, status=HTTPStatus.OK)
 
     def handle_logout(self) -> None:
         cookie_header = self.headers.get("Cookie")
