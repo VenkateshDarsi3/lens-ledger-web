@@ -72,7 +72,6 @@
         <div class="auth-card-actions">
           <div class="auth-card-links">
             <button type="button" id="authModeToggle" class="auth-toggle">Need an account? Create one</button>
-            <button type="button" id="authForgotButton" class="auth-toggle auth-forgot-button">Forgot Password?</button>
           </div>
           <button type="button" id="authCloseButton" class="auth-close-button">Close</button>
         </div>
@@ -396,22 +395,11 @@
                 </div>
               </div>
 
-              <div class="subsection">
-                <div class="subsection-header">
-                  <div>
-                    <h3>Wedding Team</h3>
-                    <p>Add each team member with their own payout amount.</p>
-                  </div>
-                  <button type="button" id="addWeddingTeamMember" class="secondary-button">Add Team Member</button>
-                </div>
-                <div id="weddingTeamList" class="team-list"></div>
-              </div>
-
               <div class="event-builder">
                 <div class="event-builder-header">
                   <div>
                     <h3>Wedding Events</h3>
-                    <p>Add only the ceremonies or functions this client actually has.</p>
+                    <p>Add only the ceremonies or functions this client actually has, and assign the team for each event separately.</p>
                   </div>
                   <button type="button" id="addWeddingEvent" class="secondary-button">Add Event</button>
                 </div>
@@ -697,6 +685,16 @@
             Event Notes
             <input type="text" data-name="eventNotes" placeholder="Coverage notes, late start, special moments" />
           </label>
+        </div>
+        <div class="subsection event-team-section">
+          <div class="subsection-header">
+            <div>
+              <h4>Event Team</h4>
+              <p>Add only the teammates covering this event.</p>
+            </div>
+            <button type="button" class="secondary-button add-event-team-button">Add Team Member</button>
+          </div>
+          <div class="team-list event-team-list"></div>
         </div>
         <button type="button" class="delete-button remove-event-button">Remove</button>
       </div>

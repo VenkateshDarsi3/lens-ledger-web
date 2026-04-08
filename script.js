@@ -23,6 +23,7 @@ const EDITOR_STATUSES = ["Pending", "Editing", "Review", "Delivered", "Paid"];
 const EDITOR_CURRENCIES = ["USD", "INR"];
 const TEAM_PAYMENT_STATUSES = ["Pending", "Completed"];
 const TEAM_DATA_SHARED_STATUSES = ["Not Shared", "Shared"];
+const PER_EVENT_TEAM_MESSAGE = "Assigned per event";
 
 const tabButtons = document.querySelectorAll(".tab-button");
 const tabPanels = document.querySelectorAll(".tab-panel");
@@ -47,7 +48,6 @@ const shootShareCancelEditButton = document.querySelector("#shootShareCancelEdit
 const editorCancelEditButton = document.querySelector("#editorCancelEdit");
 
 const addLeadTeamMemberButton = document.querySelector("#addLeadTeamMember");
-const addWeddingTeamMemberButton = document.querySelector("#addWeddingTeamMember");
 const addWeddingEventButton = document.querySelector("#addWeddingEvent");
 const addEditorDeliverableButton = document.querySelector("#addEditorDeliverable");
 const loadPackageDeliverablesButton = document.querySelector("#loadPackageDeliverables");
@@ -60,7 +60,6 @@ const weddingAvailabilityAlert = document.querySelector("#weddingAvailabilityAle
 const shootShareAvailabilityAlert = document.querySelector("#shootShareAvailabilityAlert");
 
 const leadTeamList = document.querySelector("#leadTeamList");
-const weddingTeamList = document.querySelector("#weddingTeamList");
 const weddingEventList = document.querySelector("#weddingEventList");
 const editorDeliverableList = document.querySelector("#editorDeliverableList");
 
@@ -112,7 +111,6 @@ const authTitle = document.querySelector("#authTitle");
 const authSubtitle = document.querySelector("#authSubtitle");
 const authMessage = document.querySelector("#authMessage");
 const authModeToggle = document.querySelector("#authModeToggle");
-const authForgotButton = document.querySelector("#authForgotButton");
 const authSubmitButton = document.querySelector("#authSubmitButton");
 const logoutButton = document.querySelector("#logoutButton");
 const accountEmail = document.querySelector("#accountEmail");
@@ -155,12 +153,6 @@ shootShareForm.addEventListener("submit", handleShootShareSubmit);
 editorForm.addEventListener("submit", handleEditorSubmit);
 authForm.addEventListener("submit", handleAuthSubmit);
 authModeToggle.addEventListener("click", toggleAuthMode);
-authForgotButton.addEventListener("click", () => {
-  authMode = "forgot";
-  clearAuthMessage();
-  syncAuthMode();
-  showAuthShell();
-});
 logoutButton.addEventListener("click", handleLogout);
 authCloseButton.addEventListener("click", hideAuthShell);
 authBackdrop.addEventListener("click", hideAuthShell);
@@ -179,7 +171,6 @@ eventTypeSelect.addEventListener("change", syncCustomEventField);
 leadStatusSelect.addEventListener("change", syncLeadTeamSection);
 exportCalendarButton.addEventListener("click", exportCalendar);
 addLeadTeamMemberButton.addEventListener("click", () => addTeamMemberRow(leadTeamList));
-addWeddingTeamMemberButton.addEventListener("click", () => addTeamMemberRow(weddingTeamList));
 addWeddingEventButton.addEventListener("click", () => addWeddingEventRow());
 addEditorDeliverableButton.addEventListener("click", () => addEditorDeliverableRow());
 loadPackageDeliverablesButton.addEventListener("click", () => {
@@ -447,7 +438,6 @@ function setAuthFieldState(field, visible, options = {}) {
 
 function syncAuthMode() {
   const isSignup = authMode === "signup";
-  const isForgot = authMode === "forgot";
   const isReset = authMode === "reset";
 
   if (isSignup) {
@@ -455,11 +445,6 @@ function syncAuthMode() {
     authSubtitle.textContent = "Use one account for your bookings, weddings, editor tracking, and calendar from anywhere.";
     authSubmitButton.textContent = "Create Account";
     authModeToggle.textContent = "Already have an account? Sign in";
-  } else if (isForgot) {
-    authTitle.textContent = "Forgot your password?";
-    authSubtitle.textContent = "Enter your email and we’ll send you a reset link.";
-    authSubmitButton.textContent = "Send Reset Link";
-    authModeToggle.textContent = "Back to sign in";
   } else if (isReset) {
     authTitle.textContent = "Create a new password";
     authSubtitle.textContent = "Set a new password for your dashboard account.";
@@ -476,15 +461,14 @@ function syncAuthMode() {
     required: !isReset,
     autocomplete: "email"
   });
-  setAuthFieldState(authPasswordField, !isForgot, {
-    required: !isForgot,
+  setAuthFieldState(authPasswordField, true, {
+    required: true,
     autocomplete: isSignup || isReset ? "new-password" : "current-password"
   });
   setAuthFieldState(authConfirmField, isSignup || isReset, {
     required: isSignup || isReset,
     autocomplete: "new-password"
   });
-  authForgotButton.classList.toggle("hidden", authMode !== "login");
 }
 
 function toggleAuthMode() {
@@ -505,9 +489,7 @@ async function handleAuthSubmit(event) {
   authSubmitButton.disabled = true;
   authSubmitButton.textContent = authMode === "signup"
     ? "Creating…"
-    : authMode === "forgot"
-      ? "Sending…"
-      : authMode === "reset"
+    : authMode === "reset"
         ? "Resetting…"
         : "Signing In…";
 
@@ -518,18 +500,6 @@ async function handleAuthSubmit(event) {
 
     if ((authMode === "signup" || authMode === "reset") && password !== confirmPassword) {
       throw new Error("Passwords do not match.");
-    }
-
-    if (authMode === "forgot") {
-      const payload = await apiRequest("/api/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email })
-      });
-      authMode = "login";
-      authForm.reset();
-      syncAuthMode();
-      showAuthMessage(payload.message || "Check your email for a reset link.");
-      return;
     }
 
     if (authMode === "reset") {
@@ -604,7 +574,7 @@ async function initializeResetFlow() {
     showAuthMessage(`Reset your password for ${payload.email}.`);
   } catch (error) {
     clearResetTokenFromUrl();
-    authMode = "forgot";
+    authMode = "login";
     syncAuthMode();
     showAuthMessage(error.message || "That reset link is invalid or has expired.");
   }
@@ -725,7 +695,7 @@ function handleWeddingSubmit(event) {
     hasPreWedding: hasPreWeddingCheckbox.checked,
     preWeddingDate: hasPreWeddingCheckbox.checked ? formData.get("preWeddingDate") : "",
     reviewNotes: formData.get("reviewNotes").trim(),
-    teamAssignments: readTeamRows(weddingTeamList),
+    teamAssignments: collectWeddingPlanTeamAssignments({ events }),
     events
   };
 
@@ -741,7 +711,7 @@ function handleWeddingSubmit(event) {
     location: weddingPlan.location,
     amount: getWeddingCurrentAmount(weddingPlan),
     deliverables: weddingPlan.deliverables,
-    teamAssignments: weddingPlan.teamAssignments,
+    teamAssignments: [],
     status: "Confirmed",
     notes: `Package ${weddingPlan.packageType}. Expected hours ${weddingPlan.expectedHours}. ${weddingPlan.reviewNotes || "Wedding plan saved."}`,
     source: "wedding-plan"
@@ -838,7 +808,12 @@ function renderLeads() {
       createMetaItem("Location", lead.location || "Not added"),
       createMetaItem("Amount", formatCurrency(lead.amount)),
       createMetaItem("Deliverables", lead.deliverables || "Not added"),
-      createMetaItem("Team", formatTeamAssignments(lead.teamAssignments))
+      createMetaItem(
+        "Team",
+        lead.source === "wedding-plan"
+          ? PER_EVENT_TEAM_MESSAGE
+          : formatTeamAssignments(lead.teamAssignments)
+      )
     ].join("");
 
     statusSelect.addEventListener("change", (statusEvent) => {
@@ -884,7 +859,7 @@ function renderWeddingPlans() {
       createMetaItem("Advance", formatCurrency(plan.advanceGiven)),
       createMetaItem("Pending", formatCurrency(plan.pendingAmount)),
       createMetaItem("Payment", plan.isFullyPaid ? "Fully Paid" : "Pending"),
-      createMetaItem("Team", formatTeamAssignments(plan.teamAssignments))
+      createMetaItem("Team", PER_EVENT_TEAM_MESSAGE)
     ].join("");
 
     notes.querySelector('[data-role="wedding-payment-toggle"]')?.addEventListener("change", (toggleEvent) => {
@@ -893,23 +868,23 @@ function renderWeddingPlans() {
     notes.querySelector('[data-role="wedding-actual-hours"]')?.addEventListener("change", (hoursEvent) => {
       updateWeddingActualHours(plan.id, Number(hoursEvent.target.value) || 0);
     });
-    notes.querySelectorAll('[data-role="team-hours"]').forEach((input) => {
+    notes.querySelectorAll('[data-role="event-team-hours"]').forEach((input) => {
       input.addEventListener("change", (teamEvent) => {
-        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+        updateWeddingEventTeamAssignment(plan.id, teamEvent.target.dataset.eventId, teamEvent.target.dataset.memberId, {
           hours: parseOptionalNumber(teamEvent.target.value)
         });
       });
     });
-    notes.querySelectorAll('[data-role="team-payment-status"]').forEach((select) => {
+    notes.querySelectorAll('[data-role="event-team-payment-status"]').forEach((select) => {
       select.addEventListener("change", (teamEvent) => {
-        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+        updateWeddingEventTeamAssignment(plan.id, teamEvent.target.dataset.eventId, teamEvent.target.dataset.memberId, {
           paymentStatus: teamEvent.target.value
         });
       });
     });
-    notes.querySelectorAll('[data-role="team-data-shared"]').forEach((select) => {
+    notes.querySelectorAll('[data-role="event-team-data-shared"]').forEach((select) => {
       select.addEventListener("change", (teamEvent) => {
-        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+        updateWeddingEventTeamAssignment(plan.id, teamEvent.target.dataset.eventId, teamEvent.target.dataset.memberId, {
           dataSharedStatus: teamEvent.target.value
         });
       });
@@ -1087,7 +1062,7 @@ function renderStats() {
   const unpaidEditorCurrencies = [...new Set(unpaidEditorJobs.map((job) => job.currency || "USD"))];
   const totalTeamCost = state.leads.reduce((sum, lead) => (
     confirmedStatuses.has(lead.status)
-      ? sum + (lead.teamAssignments || []).reduce((teamSum, item) => teamSum + Number(item.amount || 0), 0)
+      ? sum + getLeadTeamCost(lead)
       : sum
   ), 0);
   const profit = revenue - totalEditorCost - totalTeamCost;
@@ -1101,7 +1076,7 @@ function renderStats() {
     : unpaidEditorCurrencies.length === 1
       ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0), unpaidEditorCurrencies[0])
       : formatCurrency(0);
-  teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => lead.status === "Completed" ? sum + sumTeamAssignments(lead.teamAssignments) : sum, 0));
+  teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => lead.status === "Completed" ? sum + getLeadTeamDue(lead) : sum, 0));
   totalBankBalance.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
   renderMonthlySpend();
 }
@@ -1124,7 +1099,12 @@ function buildScheduleItems() {
         { label: "Contact", value: lead.contact || "Not added" },
         { label: "Service", value: lead.serviceType || "Not added" },
         { label: "Amount", value: formatCurrency(lead.amount) },
-        { label: "Team", value: formatTeamAssignments(lead.teamAssignments) }
+        {
+          label: "Team",
+          value: lead.source === "manual"
+            ? formatTeamAssignments(lead.teamAssignments)
+            : PER_EVENT_TEAM_MESSAGE
+        }
       ]
     }));
 
@@ -1146,7 +1126,7 @@ function buildScheduleItems() {
       { label: "Advance", value: formatCurrency(plan.advanceGiven) },
       { label: "Pending", value: formatCurrency(plan.pendingAmount) },
       { label: "Payment", value: plan.isFullyPaid ? "Fully Paid" : "Pending" },
-      { label: "Team", value: formatTeamAssignments(plan.teamAssignments) }
+      { label: "Team", value: PER_EVENT_TEAM_MESSAGE }
     ]
   }));
 
@@ -1165,7 +1145,7 @@ function buildScheduleItems() {
         { label: "Location", value: entry.eventLocation || plan.location || "Not added" },
         { label: "Covered Hours", value: formatCoveredHours(entry.coveredHours) },
         { label: "Package", value: plan.packageType || "Not added" },
-        { label: "Team", value: formatTeamAssignments(plan.teamAssignments) }
+        { label: "Team", value: formatTeamAssignments(entry.teamAssignments) }
       ]
     }))
   ));
@@ -1208,7 +1188,7 @@ function buildScheduleItems() {
           { label: "Location", value: plan.location || "Not added" },
           { label: "Package", value: plan.packageType || "Not added" },
           { label: "Live Link", value: plan.liveLink ? buildLink(plan.liveLink, "Open live link") : "Not added" },
-          { label: "Team", value: formatTeamAssignments(plan.teamAssignments) }
+          { label: "Team", value: PER_EVENT_TEAM_MESSAGE }
         ]
       });
     });
@@ -1411,10 +1391,6 @@ function populateWeddingForm(plan) {
   syncPreWeddingField();
   syncWeddingAvailability();
 
-  weddingTeamList.innerHTML = "";
-  (plan.teamAssignments || []).forEach((assignment) => addTeamMemberRow(weddingTeamList, assignment));
-  if (!weddingTeamList.children.length) addTeamMemberRow(weddingTeamList);
-
   weddingEventList.innerHTML = "";
   (plan.events || []).forEach((event) => addWeddingEventRow(event));
   if (!weddingEventList.children.length) addWeddingEventRow();
@@ -1479,8 +1455,6 @@ function resetWeddingForm() {
   weddingForm.reset();
   weddingForm.elements.weddingId.value = "";
   weddingForm.elements.totalAmount.value = "";
-  weddingTeamList.innerHTML = "";
-  addTeamMemberRow(weddingTeamList);
   weddingEventList.innerHTML = "";
   addWeddingEventRow();
   hasPreWeddingCheckbox.checked = false;
@@ -1720,6 +1694,7 @@ function isDefaultEventType(value) {
 }
 
 function normalizeWeddingPlan(plan) {
+  const inheritedAssignments = normalizeTeamAssignments(plan);
   return {
     ...plan,
     packageType: plan.packageType || "Silver",
@@ -1735,8 +1710,8 @@ function normalizeWeddingPlan(plan) {
     hasPreWedding: Boolean(plan.hasPreWedding),
     preWeddingDate: plan.preWeddingDate || "",
     reviewNotes: plan.reviewNotes || "",
-    teamAssignments: normalizeTeamAssignments(plan),
-    events: Array.isArray(plan.events) ? plan.events.map(normalizeWeddingEvent) : []
+    teamAssignments: inheritedAssignments,
+    events: Array.isArray(plan.events) ? plan.events.map((event) => normalizeWeddingEvent(event, inheritedAssignments)) : []
   };
 }
 
@@ -1760,12 +1735,15 @@ function normalizeShootShareJob(job) {
   };
 }
 
-function normalizeWeddingEvent(event) {
+function normalizeWeddingEvent(event, inheritedAssignments = []) {
   return {
     ...event,
     id: event.id || crypto.randomUUID(),
     coveredHours: parseOptionalNumber(event.coveredHours),
-    eventNotes: event.eventNotes || ""
+    eventNotes: event.eventNotes || "",
+    teamAssignments: Array.isArray(event.teamAssignments)
+      ? normalizeTeamAssignments(event)
+      : inheritedAssignments.map((item) => ({ ...item, id: crypto.randomUUID() }))
   };
 }
 
@@ -1877,12 +1855,16 @@ function readTeamRows(container) {
 function addWeddingEventRow(values = {}) {
   const fragment = weddingEventTemplate.content.cloneNode(true);
   const item = fragment.querySelector(".wedding-event-item");
+  const eventTeamList = item.querySelector(".event-team-list");
   item.querySelector('[data-name="eventName"]').value = values.eventName || "";
   item.querySelector('[data-name="eventDate"]').value = values.eventDate || "";
   item.querySelector('[data-name="eventTime"]').value = values.eventTime || "";
   item.querySelector('[data-name="eventLocation"]').value = values.eventLocation || "";
   item.querySelector('[data-name="coveredHours"]').value = values.coveredHours ?? "";
   item.querySelector('[data-name="eventNotes"]').value = values.eventNotes || "";
+  (values.teamAssignments || []).forEach((assignment) => addTeamMemberRow(eventTeamList, assignment));
+  if (!eventTeamList.children.length) addTeamMemberRow(eventTeamList);
+  item.querySelector(".add-event-team-button").addEventListener("click", () => addTeamMemberRow(eventTeamList));
   item.querySelector(".remove-event-button").addEventListener("click", () => {
     item.remove();
     if (!weddingEventList.children.length) addWeddingEventRow();
@@ -1899,7 +1881,8 @@ function readWeddingEventRows() {
       eventTime: row.querySelector('[data-name="eventTime"]').value.trim(),
       eventLocation: row.querySelector('[data-name="eventLocation"]').value.trim(),
       coveredHours: parseOptionalNumber(row.querySelector('[data-name="coveredHours"]').value),
-      eventNotes: row.querySelector('[data-name="eventNotes"]').value.trim()
+      eventNotes: row.querySelector('[data-name="eventNotes"]').value.trim(),
+      teamAssignments: readTeamRows(row.querySelector(".event-team-list"))
     }))
     .filter((item) => item.eventName && item.eventDate);
 }
@@ -1998,7 +1981,7 @@ function buildCalendarItems() {
       title: `${lead.clientName} - ${lead.eventType}`,
       date: lead.eventDate,
       time: lead.eventTime,
-      description: `${lead.notes || ""}\nDeliverables: ${lead.deliverables || "Not added"}\nTeam: ${formatTeamAssignments(lead.teamAssignments)}`.trim(),
+      description: `${lead.notes || ""}\nDeliverables: ${lead.deliverables || "Not added"}\nTeam: ${lead.source === "manual" ? formatTeamAssignments(lead.teamAssignments) : PER_EVENT_TEAM_MESSAGE}`.trim(),
       location: lead.location || ""
     }));
 
@@ -2264,11 +2247,13 @@ function renderMonthlySpend() {
 
 function getMonthlyTeamSpend(monthValue) {
   const weddingSpend = state.weddingPlans.reduce((sum, plan) => (
-    isDateInMonth(plan.weddingDate, monthValue)
-      ? sum + (plan.teamAssignments || []).reduce((teamSum, item) => (
-        item.paymentStatus === "Completed" ? teamSum + Number(item.amount || 0) : teamSum
-      ), 0)
-      : sum
+    sum + (plan.events || []).reduce((eventSum, event) => (
+      isDateInMonth(event.eventDate || plan.weddingDate, monthValue)
+        ? eventSum + (event.teamAssignments || []).reduce((teamSum, item) => (
+          item.paymentStatus === "Completed" ? teamSum + Number(item.amount || 0) : teamSum
+        ), 0)
+        : eventSum
+    ), 0)
   ), 0);
 
   const leadSpend = state.leads.reduce((sum, lead) => (
@@ -2366,40 +2351,46 @@ function parseOptionalNumber(value) {
 }
 
 function renderWeddingTeamManager(plan) {
-  if (!plan.teamAssignments?.length) return "";
+  const eventsWithTeam = (plan.events || []).filter((event) => (event.teamAssignments || []).length);
+  if (!eventsWithTeam.length) return "";
 
   return `
     <div class="team-summary-panel">
       <h4 class="team-summary-title">Team Updates</h4>
       <div class="team-summary-list">
-        ${plan.teamAssignments.map((item) => `
-          <div class="team-summary-row">
-            <div class="team-summary-row-head">
-              <strong>${escapeHtml(item.name || "Team Member")}</strong>
-              <span>${formatCurrency(item.rate)}/hr</span>
-            </div>
-            <div class="team-summary-grid">
-              <label>
-                Hours Worked
-                <input type="number" min="0" step="0.5" data-role="team-hours" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
-              </label>
-              <label>
-                Amount
-                <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
-              </label>
-              <label>
-                Payment Status
-                <select data-role="team-payment-status" data-member-id="${item.id}">
-                  ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
-                </select>
-              </label>
-              <label>
-                Data Shared
-                <select data-role="team-data-shared" data-member-id="${item.id}">
-                  ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
-                </select>
-              </label>
-            </div>
+        ${eventsWithTeam.map((event) => `
+          <div class="team-summary-event-block">
+            <h5 class="team-summary-event-title">${escapeHtml(event.eventName || "Wedding Event")}</h5>
+            ${(event.teamAssignments || []).map((item) => `
+              <div class="team-summary-row">
+                <div class="team-summary-row-head">
+                  <strong>${escapeHtml(item.name || "Team Member")}</strong>
+                  <span>${formatCurrency(item.rate)}/hr</span>
+                </div>
+                <div class="team-summary-grid">
+                  <label>
+                    Hours Worked
+                    <input type="number" min="0" step="0.5" data-role="event-team-hours" data-event-id="${event.id}" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
+                  </label>
+                  <label>
+                    Amount
+                    <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
+                  </label>
+                  <label>
+                    Payment Status
+                    <select data-role="event-team-payment-status" data-event-id="${event.id}" data-member-id="${item.id}">
+                      ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
+                    </select>
+                  </label>
+                  <label>
+                    Data Shared
+                    <select data-role="event-team-data-shared" data-event-id="${event.id}" data-member-id="${item.id}">
+                      ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
+                    </select>
+                  </label>
+                </div>
+              </div>
+            `).join("")}
           </div>
         `).join("")}
       </div>
@@ -2407,44 +2398,71 @@ function renderWeddingTeamManager(plan) {
   `;
 }
 
-function updateWeddingTeamAssignment(planId, memberId, updates) {
+function updateWeddingEventTeamAssignment(planId, eventId, memberId, updates) {
   state.weddingPlans = state.weddingPlans.map((plan) => {
     if (plan.id !== planId) return plan;
-
-    const updatedAssignments = (plan.teamAssignments || []).map((item) => {
-      if (item.id !== memberId) return item;
-      const next = {
-        ...item,
-        ...updates
-      };
-      const hours = parseOptionalNumber(next.hours);
-      const rate = Number(next.rate) || 0;
-      const amount = hours !== null && rate ? hours * rate : parseOptionalNumber(next.amount);
-      const paymentStatus = next.paymentStatus || (next.paid ? "Completed" : "Pending");
+    const updatedEvents = (plan.events || []).map((event) => {
+      if (event.id !== eventId) return event;
       return {
-        ...next,
-        hours,
-        amount,
-        paymentStatus,
-        paid: paymentStatus === "Completed",
-        dataSharedStatus: next.dataSharedStatus || "Not Shared"
+        ...event,
+        teamAssignments: (event.teamAssignments || []).map((item) => {
+          if (item.id !== memberId) return item;
+          const next = {
+            ...item,
+            ...updates
+          };
+          const hours = parseOptionalNumber(next.hours);
+          const rate = Number(next.rate) || 0;
+          const amount = hours !== null && rate ? hours * rate : parseOptionalNumber(next.amount);
+          const paymentStatus = next.paymentStatus || (next.paid ? "Completed" : "Pending");
+          return {
+            ...next,
+            hours,
+            amount,
+            paymentStatus,
+            paid: paymentStatus === "Completed",
+            dataSharedStatus: next.dataSharedStatus || "Not Shared"
+          };
+        })
       };
     });
-
     return {
       ...plan,
-      teamAssignments: updatedAssignments
+      events: updatedEvents,
+      teamAssignments: collectWeddingPlanTeamAssignments({ ...plan, events: updatedEvents })
     };
   });
 
   state.leads = state.leads.map((lead) => {
     if (!(lead.source === "wedding-plan" && lead.id === planId)) return lead;
     const plan = state.weddingPlans.find((item) => item.id === planId);
-    return plan ? { ...lead, teamAssignments: plan.teamAssignments } : lead;
+    return plan ? { ...lead, teamAssignments: collectWeddingPlanTeamAssignments(plan) } : lead;
   });
 
   saveState();
   renderAll();
+}
+
+function collectWeddingPlanTeamAssignments(plan) {
+  return (plan?.events || []).flatMap((event) => (
+    (event.teamAssignments || []).map((item) => ({ ...item }))
+  ));
+}
+
+function getLeadTeamAssignments(lead) {
+  if (lead.source === "wedding-plan") {
+    const plan = state.weddingPlans.find((item) => item.id === lead.id);
+    if (plan) return collectWeddingPlanTeamAssignments(plan);
+  }
+  return lead.teamAssignments || [];
+}
+
+function getLeadTeamCost(lead) {
+  return getLeadTeamAssignments(lead).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+}
+
+function getLeadTeamDue(lead) {
+  return sumTeamAssignments(getLeadTeamAssignments(lead));
 }
 
 function upsertById(list, entry) {
