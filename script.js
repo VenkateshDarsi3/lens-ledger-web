@@ -20,6 +20,9 @@ const DELIVERABLE_TYPES = [
 const DELIVERABLE_STATUSES = ["Pending", "In Progress", "Review", "Delivered"];
 const LEAD_STATUSES = ["Enquiry", "Follow-up", "Confirmed", "Completed", "Closed"];
 const EDITOR_STATUSES = ["Pending", "Editing", "Review", "Delivered", "Paid"];
+const EDITOR_CURRENCIES = ["USD", "INR"];
+const TEAM_PAYMENT_STATUSES = ["Pending", "Completed"];
+const TEAM_DATA_SHARED_STATUSES = ["Not Shared", "Shared"];
 
 const tabButtons = document.querySelectorAll(".tab-button");
 const tabPanels = document.querySelectorAll(".tab-panel");
@@ -68,6 +71,7 @@ const scheduleList = document.querySelector("#scheduleList");
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const editorList = document.querySelector("#editorList");
+const bankAccountsList = document.querySelector("#bankAccountsList");
 
 const pipelineEmptyState = document.querySelector("#pipelineEmptyState");
 const weddingPlansEmptyState = document.querySelector("#weddingPlansEmptyState");
@@ -78,11 +82,14 @@ const editorEmptyState = document.querySelector("#editorEmptyState");
 const statusFilter = document.querySelector("#statusFilter");
 const calendarPrevButton = document.querySelector("#calendarPrevButton");
 const calendarNextButton = document.querySelector("#calendarNextButton");
+const overviewMonthInput = document.querySelector("#overviewMonthInput");
+const addBankAccountButton = document.querySelector("#addBankAccountButton");
 
 const leadCardTemplate = document.querySelector("#leadCardTemplate");
 const scheduleCardTemplate = document.querySelector("#scheduleCardTemplate");
 const weddingEventTemplate = document.querySelector("#weddingEventTemplate");
 const teamMemberTemplate = document.querySelector("#teamMemberTemplate");
+const bankAccountTemplate = document.querySelector("#bankAccountTemplate");
 const editorDeliverableTemplate = document.querySelector("#editorDeliverableTemplate");
 
 const totalEnquiries = document.querySelector("#totalEnquiries");
@@ -91,6 +98,11 @@ const totalRevenue = document.querySelector("#totalRevenue");
 const totalProfit = document.querySelector("#totalProfit");
 const editorDue = document.querySelector("#editorDue");
 const teamDue = document.querySelector("#teamDue");
+const totalBankBalance = document.querySelector("#totalBankBalance");
+const monthlySpendTotal = document.querySelector("#monthlySpendTotal");
+const monthlySpendBreakdown = document.querySelector("#monthlySpendBreakdown");
+const overviewMonthCaption = document.querySelector("#overviewMonthCaption");
+const balanceAfterSpend = document.querySelector("#balanceAfterSpend");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
 const publicShell = document.querySelector("#publicShell");
 const appShell = document.querySelector("#appShell");
@@ -100,6 +112,7 @@ const authTitle = document.querySelector("#authTitle");
 const authSubtitle = document.querySelector("#authSubtitle");
 const authMessage = document.querySelector("#authMessage");
 const authModeToggle = document.querySelector("#authModeToggle");
+const authForgotButton = document.querySelector("#authForgotButton");
 const authSubmitButton = document.querySelector("#authSubmitButton");
 const logoutButton = document.querySelector("#logoutButton");
 const accountEmail = document.querySelector("#accountEmail");
@@ -107,6 +120,12 @@ const syncStatus = document.querySelector("#syncStatus");
 const authCloseButton = document.querySelector("#authCloseButton");
 const authBackdrop = document.querySelector("#authBackdrop");
 const openAuthButtons = document.querySelectorAll(".open-auth-button");
+const authEmailField = document.querySelector("#authEmailField");
+const authPasswordField = document.querySelector("#authPasswordField");
+const authConfirmField = document.querySelector("#authConfirmField");
+const authEmailInput = authForm.elements.email;
+const authPasswordInput = authForm.elements.password;
+const authConfirmInput = authForm.elements.confirmPassword;
 let brandHeroIntervalId = null;
 let brandHeroSignature = "";
 let authMode = "login";
@@ -118,11 +137,13 @@ const initialState = {
   leads: [],
   weddingPlans: [],
   shootShareJobs: [],
-  editorJobs: []
+  editorJobs: [],
+  bankAccounts: []
 };
 
 let state = createEmptyState();
 let calendarCursor = startOfMonth(new Date());
+let overviewMonthCursor = formatMonthValue(new Date());
 
 tabButtons.forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.tab));
@@ -134,11 +155,18 @@ shootShareForm.addEventListener("submit", handleShootShareSubmit);
 editorForm.addEventListener("submit", handleEditorSubmit);
 authForm.addEventListener("submit", handleAuthSubmit);
 authModeToggle.addEventListener("click", toggleAuthMode);
+authForgotButton.addEventListener("click", () => {
+  authMode = "forgot";
+  clearAuthMessage();
+  syncAuthMode();
+  showAuthShell();
+});
 logoutButton.addEventListener("click", handleLogout);
 authCloseButton.addEventListener("click", hideAuthShell);
 authBackdrop.addEventListener("click", hideAuthShell);
 openAuthButtons.forEach((button) => button.addEventListener("click", () => {
   clearAuthMessage();
+  clearResetTokenFromUrl();
   authMode = "login";
   syncAuthMode();
   showAuthShell();
@@ -157,6 +185,16 @@ addEditorDeliverableButton.addEventListener("click", () => addEditorDeliverableR
 loadPackageDeliverablesButton.addEventListener("click", () => {
   const packageName = editorForm.elements.editorPackage.value;
   loadPackageDeliverables(packageName, true);
+});
+addBankAccountButton?.addEventListener("click", () => {
+  state.bankAccounts.push(createBankAccount());
+  renderOverviewBankAccounts();
+  renderStats();
+  saveState();
+});
+overviewMonthInput?.addEventListener("change", (event) => {
+  overviewMonthCursor = event.target.value || formatMonthValue(new Date());
+  renderMonthlySpend();
 });
 leadCancelEditButton.addEventListener("click", resetLeadForm);
 weddingCancelEditButton.addEventListener("click", resetWeddingForm);
@@ -199,7 +237,8 @@ function createEmptyState() {
     leads: [],
     weddingPlans: [],
     shootShareJobs: [],
-    editorJobs: []
+    editorJobs: [],
+    bankAccounts: []
   };
 }
 
@@ -209,7 +248,8 @@ function normalizeAppState(rawState) {
     leads: (safeState.leads || []).map(normalizeLead),
     weddingPlans: (safeState.weddingPlans || []).map(normalizeWeddingPlan),
     shootShareJobs: (safeState.shootShareJobs || []).map(normalizeShootShareJob),
-    editorJobs: (safeState.editorJobs || []).map(normalizeEditorJob)
+    editorJobs: (safeState.editorJobs || []).map(normalizeEditorJob),
+    bankAccounts: (safeState.bankAccounts || []).map(normalizeBankAccount)
   };
 }
 
@@ -311,6 +351,9 @@ function initializeForms() {
   resetWeddingForm();
   resetShootShareForm();
   resetEditorForm();
+  if (overviewMonthInput) {
+    overviewMonthInput.value = overviewMonthCursor;
+  }
   syncCustomEventField();
   syncLeadTeamSection();
   syncLeadAvailability();
@@ -325,6 +368,7 @@ function renderAll() {
   renderSchedule();
   renderCalendarView();
   renderEditorJobs();
+  renderOverviewBankAccounts();
   renderStats();
 }
 
@@ -340,6 +384,7 @@ async function initializeApp() {
   } catch {
     showPublicLanding();
     setSyncStatus("Sign in required");
+    await initializeResetFlow();
   }
 }
 
@@ -373,18 +418,82 @@ function clearAuthMessage() {
   authMessage.classList.add("hidden");
 }
 
+function getResetTokenFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("reset") || "";
+}
+
+function clearResetTokenFromUrl() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("reset")) return;
+  url.searchParams.delete("reset");
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, "", next);
+}
+
+function setAuthFieldState(field, visible, options = {}) {
+  field.classList.toggle("hidden", !visible);
+  const input = field.querySelector("input");
+  if (!input) return;
+
+  input.required = Boolean(options.required);
+  if (options.autocomplete) {
+    input.autocomplete = options.autocomplete;
+  }
+  if (options.placeholder !== undefined) {
+    input.placeholder = options.placeholder;
+  }
+}
+
 function syncAuthMode() {
   const isSignup = authMode === "signup";
-  authTitle.textContent = isSignup ? "Create your dashboard account" : "Sign in to your dashboard";
-  authSubtitle.textContent = isSignup
-    ? "Use one account for your bookings, weddings, editor tracking, and calendar from anywhere."
-    : "Access your photography workflow from anywhere once this app is running on the web.";
-  authSubmitButton.textContent = isSignup ? "Create Account" : "Sign In";
-  authModeToggle.textContent = isSignup ? "Already have an account? Sign in" : "Need an account? Create one";
+  const isForgot = authMode === "forgot";
+  const isReset = authMode === "reset";
+
+  if (isSignup) {
+    authTitle.textContent = "Create your dashboard account";
+    authSubtitle.textContent = "Use one account for your bookings, weddings, editor tracking, and calendar from anywhere.";
+    authSubmitButton.textContent = "Create Account";
+    authModeToggle.textContent = "Already have an account? Sign in";
+  } else if (isForgot) {
+    authTitle.textContent = "Forgot your password?";
+    authSubtitle.textContent = "Enter your email and we’ll send you a reset link.";
+    authSubmitButton.textContent = "Send Reset Link";
+    authModeToggle.textContent = "Back to sign in";
+  } else if (isReset) {
+    authTitle.textContent = "Create a new password";
+    authSubtitle.textContent = "Set a new password for your dashboard account.";
+    authSubmitButton.textContent = "Reset Password";
+    authModeToggle.textContent = "Back to sign in";
+  } else {
+    authTitle.textContent = "Sign in to your dashboard";
+    authSubtitle.textContent = "Access your photography workflow from anywhere once this app is running on the web.";
+    authSubmitButton.textContent = "Sign In";
+    authModeToggle.textContent = "Need an account? Create one";
+  }
+
+  setAuthFieldState(authEmailField, !isReset, {
+    required: !isReset,
+    autocomplete: "email"
+  });
+  setAuthFieldState(authPasswordField, !isForgot, {
+    required: !isForgot,
+    autocomplete: isSignup || isReset ? "new-password" : "current-password"
+  });
+  setAuthFieldState(authConfirmField, isSignup || isReset, {
+    required: isSignup || isReset,
+    autocomplete: "new-password"
+  });
+  authForgotButton.classList.toggle("hidden", authMode !== "login");
 }
 
 function toggleAuthMode() {
-  authMode = authMode === "login" ? "signup" : "login";
+  if (authMode === "login") {
+    authMode = "signup";
+  } else {
+    authMode = "login";
+    clearResetTokenFromUrl();
+  }
   clearAuthMessage();
   syncAuthMode();
 }
@@ -394,20 +503,61 @@ async function handleAuthSubmit(event) {
   clearAuthMessage();
   const formData = new FormData(authForm);
   authSubmitButton.disabled = true;
-  authSubmitButton.textContent = authMode === "signup" ? "Creating…" : "Signing In…";
+  authSubmitButton.textContent = authMode === "signup"
+    ? "Creating…"
+    : authMode === "forgot"
+      ? "Sending…"
+      : authMode === "reset"
+        ? "Resetting…"
+        : "Signing In…";
 
   try {
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+    const confirmPassword = String(formData.get("confirmPassword") || "");
+
+    if ((authMode === "signup" || authMode === "reset") && password !== confirmPassword) {
+      throw new Error("Passwords do not match.");
+    }
+
+    if (authMode === "forgot") {
+      const payload = await apiRequest("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      authMode = "login";
+      authForm.reset();
+      syncAuthMode();
+      showAuthMessage(payload.message || "Check your email for a reset link.");
+      return;
+    }
+
+    if (authMode === "reset") {
+      const token = getResetTokenFromUrl();
+      if (!token) {
+        throw new Error("That reset link is missing or expired.");
+      }
+      const payload = await apiRequest("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password })
+      });
+      clearResetTokenFromUrl();
+      authMode = "login";
+      authForm.reset();
+      syncAuthMode();
+      showAuthMessage(payload.message || "Your password has been updated. Please sign in.");
+      return;
+    }
+
     const payload = await apiRequest(`/api/auth/${authMode}`, {
       method: "POST",
-      body: JSON.stringify({
-        email: String(formData.get("email") || "").trim(),
-        password: String(formData.get("password") || "")
-      })
+      body: JSON.stringify({ email, password })
     });
 
     currentUser = payload.user;
     accountEmail.textContent = currentUser.email;
     authForm.reset();
+    clearResetTokenFromUrl();
     showAppShell();
     setSyncStatus("Connected");
     await loadRemoteState();
@@ -438,6 +588,25 @@ async function handleLogout() {
     showPublicLanding();
     clearAuthMessage();
     setSyncStatus("Signed out");
+  }
+}
+
+async function initializeResetFlow() {
+  const token = getResetTokenFromUrl();
+  if (!token) return;
+
+  authMode = "reset";
+  syncAuthMode();
+  showAuthShell();
+
+  try {
+    const payload = await apiRequest(`/api/auth/reset-password?token=${encodeURIComponent(token)}`);
+    showAuthMessage(`Reset your password for ${payload.email}.`);
+  } catch (error) {
+    clearResetTokenFromUrl();
+    authMode = "forgot";
+    syncAuthMode();
+    showAuthMessage(error.message || "That reset link is invalid or has expired.");
   }
 }
 
@@ -596,6 +765,7 @@ function handleEditorSubmit(event) {
     dueDate: formData.get("dueDate"),
     status: formData.get("status"),
     amountDue: Number(formData.get("amountDue")) || 0,
+    currency: EDITOR_CURRENCIES.includes(formData.get("editorCurrency")) ? formData.get("editorCurrency") : "USD",
     editorPackage: formData.get("editorPackage"),
     deliverables: readEditorDeliverables()
   };
@@ -720,8 +890,29 @@ function renderWeddingPlans() {
     notes.querySelector('[data-role="wedding-payment-toggle"]')?.addEventListener("change", (toggleEvent) => {
       updateWeddingPaymentStatus(plan.id, toggleEvent.target.checked);
     });
-    notes.querySelector('[data-role="wedding-actual-hours"]')?.addEventListener("input", (hoursEvent) => {
+    notes.querySelector('[data-role="wedding-actual-hours"]')?.addEventListener("change", (hoursEvent) => {
       updateWeddingActualHours(plan.id, Number(hoursEvent.target.value) || 0);
+    });
+    notes.querySelectorAll('[data-role="team-hours"]').forEach((input) => {
+      input.addEventListener("change", (teamEvent) => {
+        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+          hours: parseOptionalNumber(teamEvent.target.value)
+        });
+      });
+    });
+    notes.querySelectorAll('[data-role="team-payment-status"]').forEach((select) => {
+      select.addEventListener("change", (teamEvent) => {
+        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+          paymentStatus: teamEvent.target.value
+        });
+      });
+    });
+    notes.querySelectorAll('[data-role="team-data-shared"]').forEach((select) => {
+      select.addEventListener("change", (teamEvent) => {
+        updateWeddingTeamAssignment(plan.id, teamEvent.target.dataset.memberId, {
+          dataSharedStatus: teamEvent.target.value
+        });
+      });
     });
     editButton.addEventListener("click", () => populateWeddingForm(plan));
     deleteButton.addEventListener("click", () => deleteWeddingPlan(plan.id));
@@ -772,10 +963,11 @@ function renderShootShareJobs() {
 
 function renderSchedule() {
   const items = buildScheduleItems();
+  const groupedItems = groupScheduleItems(items);
   scheduleList.innerHTML = "";
-  scheduleEmptyState.classList.toggle("hidden", items.length > 0);
+  scheduleEmptyState.classList.toggle("hidden", groupedItems.length > 0);
 
-  items.forEach((item) => {
+  groupedItems.forEach((item) => {
     const fragment = scheduleCardTemplate.content.cloneNode(true);
     fragment.querySelector(".schedule-badge").textContent = item.type;
     fragment.querySelector(".schedule-badge").classList.add(getBadgeClass(item.badgeStatus));
@@ -864,7 +1056,8 @@ function renderEditorJobs() {
     meta.innerHTML = [
       createMetaItem("Editor", job.editorName),
       createMetaItem("Due", formatDate(job.dueDate)),
-      createMetaItem("Amount", formatCurrency(job.amountDue)),
+      createMetaItem("Amount", formatMoney(job.amountDue, job.currency)),
+      createMetaItem("Currency", job.currency || "USD"),
       createMetaItem("Package", job.editorPackage || "Custom"),
       createMetaItem("Pending", String(countPendingDeliverables(job.deliverables)))
     ].join("");
@@ -889,6 +1082,9 @@ function renderStats() {
   const confirmedStatuses = new Set(["Confirmed", "Completed"]);
   const revenue = state.leads.reduce((sum, lead) => confirmedStatuses.has(lead.status) ? sum + Number(lead.amount || 0) : sum, 0);
   const totalEditorCost = state.editorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
+  const hasNonUsdEditorAmounts = state.editorJobs.some((job) => Number(job.amountDue || 0) > 0 && (job.currency || "USD") !== "USD");
+  const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && Number(job.amountDue || 0) > 0);
+  const unpaidEditorCurrencies = [...new Set(unpaidEditorJobs.map((job) => job.currency || "USD"))];
   const totalTeamCost = state.leads.reduce((sum, lead) => (
     confirmedStatuses.has(lead.status)
       ? sum + (lead.teamAssignments || []).reduce((teamSum, item) => teamSum + Number(item.amount || 0), 0)
@@ -899,9 +1095,15 @@ function renderStats() {
   totalEnquiries.textContent = state.leads.length;
   totalConfirmed.textContent = state.leads.filter((lead) => confirmedStatuses.has(lead.status)).length;
   totalRevenue.textContent = formatCurrency(revenue);
-  totalProfit.textContent = formatCurrency(profit);
-  editorDue.textContent = formatCurrency(state.editorJobs.reduce((sum, job) => job.status === "Paid" ? sum : sum + Number(job.amountDue || 0), 0));
+  totalProfit.textContent = hasNonUsdEditorAmounts ? "Check currencies" : formatCurrency(profit);
+  editorDue.textContent = unpaidEditorCurrencies.length > 1
+    ? "Mixed currencies"
+    : unpaidEditorCurrencies.length === 1
+      ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0), unpaidEditorCurrencies[0])
+      : formatCurrency(0);
   teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => lead.status === "Completed" ? sum + sumTeamAssignments(lead.teamAssignments) : sum, 0));
+  totalBankBalance.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
+  renderMonthlySpend();
 }
 
 function buildScheduleItems() {
@@ -961,7 +1163,7 @@ function buildScheduleItems() {
         .join("<br><br>"),
       meta: [
         { label: "Location", value: entry.eventLocation || plan.location || "Not added" },
-        { label: "Covered Hours", value: String(entry.coveredHours || 0) },
+        { label: "Covered Hours", value: formatCoveredHours(entry.coveredHours) },
         { label: "Package", value: plan.packageType || "Not added" },
         { label: "Team", value: formatTeamAssignments(plan.teamAssignments) }
       ]
@@ -1013,6 +1215,49 @@ function buildScheduleItems() {
   }
 
   return [...leadItems, ...weddingItems, ...weddingEventItems, ...shootShareItems].sort((left, right) => new Date(left.sortDate) - new Date(right.sortDate));
+}
+
+function groupScheduleItems(items) {
+  const grouped = new Map();
+
+  items.forEach((item) => {
+    const key = item.sortDate || "undated";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item);
+  });
+
+  return Array.from(grouped.entries())
+    .sort((left, right) => {
+      const leftTime = left[0] === "undated" ? Number.POSITIVE_INFINITY : new Date(left[0]).getTime();
+      const rightTime = right[0] === "undated" ? Number.POSITIVE_INFINITY : new Date(right[0]).getTime();
+      return leftTime - rightTime;
+    })
+    .map(([dateKey, groupedItems]) => {
+      const firstItem = groupedItems[0];
+      return {
+        type: `${groupedItems.length} ${groupedItems.length === 1 ? "Event" : "Events"}`,
+        badgeStatus: firstItem.badgeStatus,
+        title: groupedItems.length === 1 ? firstItem.title : `${groupedItems.length} events scheduled`,
+        dateLabel: dateKey === "undated" ? "Date not set" : formatDate(dateKey),
+        meta: [
+          { label: "Entries", value: String(groupedItems.length) },
+          { label: "Types", value: Array.from(new Set(groupedItems.map((item) => item.type))).join(", ") }
+        ],
+        notes: groupedItems.map((item) => `
+          <section class="schedule-day-entry">
+            <div class="schedule-day-entry-top">
+              <div>
+                <span class="badge ${getBadgeClass(item.badgeStatus)}">${escapeHtml(item.type)}</span>
+                <h4 class="schedule-day-entry-title">${escapeHtml(item.title)}</h4>
+              </div>
+              <p class="schedule-day-entry-time">${escapeHtml(item.dateLabel)}</p>
+            </div>
+            <div class="schedule-day-entry-grid">${item.meta.map((entry) => createMetaItem(entry.label, entry.value)).join("")}</div>
+            <div class="schedule-day-entry-notes">${item.notes}</div>
+          </section>
+        `).join("")
+      };
+    });
 }
 
 function buildCalendarDayMap() {
@@ -1186,6 +1431,7 @@ function populateEditorForm(job) {
   editorForm.elements.dueDate.value = job.dueDate || "";
   editorForm.elements.status.value = job.status || "Pending";
   editorForm.elements.amountDue.value = job.amountDue || "";
+  editorForm.elements.editorCurrency.value = job.currency || "USD";
   editorForm.elements.editorPackage.value = job.editorPackage || "";
   editorDeliverableList.innerHTML = "";
   (job.deliverables || []).forEach((item) => addEditorDeliverableRow(item));
@@ -1236,7 +1482,7 @@ function resetWeddingForm() {
   weddingTeamList.innerHTML = "";
   addTeamMemberRow(weddingTeamList);
   weddingEventList.innerHTML = "";
-  addWeddingEventRow({ eventName: "Muhurtam" });
+  addWeddingEventRow();
   hasPreWeddingCheckbox.checked = false;
   syncWeddingPaymentFields();
   syncPreWeddingField();
@@ -1248,6 +1494,7 @@ function resetWeddingForm() {
 function resetEditorForm() {
   editorForm.reset();
   editorForm.elements.editorJobId.value = "";
+  editorForm.elements.editorCurrency.value = "USD";
   editorDeliverableList.innerHTML = "";
   addEditorDeliverableRow();
   editorSubmitButton.textContent = "Add editor task";
@@ -1517,7 +1764,7 @@ function normalizeWeddingEvent(event) {
   return {
     ...event,
     id: event.id || crypto.randomUUID(),
-    coveredHours: Number(event.coveredHours) || 0,
+    coveredHours: parseOptionalNumber(event.coveredHours),
     eventNotes: event.eventNotes || ""
   };
 }
@@ -1525,6 +1772,7 @@ function normalizeWeddingEvent(event) {
 function normalizeEditorJob(job) {
   return {
     ...job,
+    currency: EDITOR_CURRENCIES.includes(job.currency) ? job.currency : "USD",
     editorPackage: job.editorPackage || "",
     deliverables: normalizeEditorDeliverables(job)
   };
@@ -1552,15 +1800,25 @@ function normalizeEditorDeliverables(job) {
   return [];
 }
 
+function normalizeBankAccount(account) {
+  return {
+    id: account.id || crypto.randomUUID(),
+    name: account.name || "",
+    balance: Number(account.balance) || 0
+  };
+}
+
 function normalizeTeamAssignments(entity) {
   if (Array.isArray(entity.teamAssignments)) {
     return entity.teamAssignments.map((item) => ({
       id: item.id || crypto.randomUUID(),
       name: item.name || "",
-      hours: Number(item.hours) || 0,
+      hours: parseOptionalNumber(item.hours),
       rate: Number(item.rate) || 0,
-      amount: Number(item.amount) || 0,
-      paid: Boolean(item.paid)
+      amount: parseOptionalNumber(item.amount),
+      paid: item.paymentStatus ? item.paymentStatus === "Completed" : Boolean(item.paid),
+      paymentStatus: item.paymentStatus || (item.paid ? "Completed" : "Pending"),
+      dataSharedStatus: item.dataSharedStatus || (item.dataShared ? "Shared" : "Not Shared")
     }));
   }
 
@@ -1571,10 +1829,12 @@ function normalizeTeamAssignments(entity) {
     return (names.length ? names : ["Team Member"]).map((name) => ({
       id: crypto.randomUUID(),
       name,
-      hours: 0,
+      hours: null,
       rate: 0,
       amount: names.length > 1 ? Math.round(each / names.length) : each,
-      paid: false
+      paid: false,
+      paymentStatus: "Pending",
+      dataSharedStatus: "Not Shared"
     }));
   }
 
@@ -1585,25 +1845,12 @@ function addTeamMemberRow(container, values = {}) {
   const fragment = teamMemberTemplate.content.cloneNode(true);
   const item = fragment.querySelector(".team-member-item");
   const nameInput = item.querySelector('[data-name="memberName"]');
-  const hoursInput = item.querySelector('[data-name="memberHours"]');
   const rateInput = item.querySelector('[data-name="memberRate"]');
   const amountInput = item.querySelector('[data-name="memberAmount"]');
-  const paidInput = item.querySelector('[data-name="memberPaid"]');
 
   nameInput.value = values.name || "";
-  hoursInput.value = values.hours || "";
   rateInput.value = values.rate || "";
-  amountInput.value = values.amount || "";
-  paidInput.checked = Boolean(values.paid);
-
-  const syncAmount = () => {
-    const hours = Number(hoursInput.value) || 0;
-    const rate = Number(rateInput.value) || 0;
-    amountInput.value = hours * rate ? String(hours * rate) : "";
-  };
-
-  hoursInput.addEventListener("input", syncAmount);
-  rateInput.addEventListener("input", syncAmount);
+  amountInput.value = values.amount ?? "";
 
   item.querySelector(".remove-team-button").addEventListener("click", () => {
     item.remove();
@@ -1617,12 +1864,14 @@ function readTeamRows(container) {
     .map((row) => ({
       id: crypto.randomUUID(),
       name: row.querySelector('[data-name="memberName"]').value.trim(),
-      hours: Number(row.querySelector('[data-name="memberHours"]').value) || 0,
+      hours: null,
       rate: Number(row.querySelector('[data-name="memberRate"]').value) || 0,
-      amount: Number(row.querySelector('[data-name="memberAmount"]').value) || 0,
-      paid: row.querySelector('[data-name="memberPaid"]').checked
+      amount: parseOptionalNumber(row.querySelector('[data-name="memberAmount"]').value),
+      paid: false,
+      paymentStatus: "Pending",
+      dataSharedStatus: "Not Shared"
     }))
-    .filter((item) => item.name || item.hours || item.rate || item.amount);
+    .filter((item) => item.name || item.rate || item.amount !== null);
 }
 
 function addWeddingEventRow(values = {}) {
@@ -1632,7 +1881,7 @@ function addWeddingEventRow(values = {}) {
   item.querySelector('[data-name="eventDate"]').value = values.eventDate || "";
   item.querySelector('[data-name="eventTime"]').value = values.eventTime || "";
   item.querySelector('[data-name="eventLocation"]').value = values.eventLocation || "";
-  item.querySelector('[data-name="coveredHours"]').value = values.coveredHours || "";
+  item.querySelector('[data-name="coveredHours"]').value = values.coveredHours ?? "";
   item.querySelector('[data-name="eventNotes"]').value = values.eventNotes || "";
   item.querySelector(".remove-event-button").addEventListener("click", () => {
     item.remove();
@@ -1649,7 +1898,7 @@ function readWeddingEventRows() {
       eventDate: row.querySelector('[data-name="eventDate"]').value,
       eventTime: row.querySelector('[data-name="eventTime"]').value.trim(),
       eventLocation: row.querySelector('[data-name="eventLocation"]').value.trim(),
-      coveredHours: Number(row.querySelector('[data-name="coveredHours"]').value) || 0,
+      coveredHours: parseOptionalNumber(row.querySelector('[data-name="coveredHours"]').value),
       eventNotes: row.querySelector('[data-name="eventNotes"]').value.trim()
     }))
     .filter((item) => item.eventName && item.eventDate);
@@ -1838,6 +2087,15 @@ function formatCurrency(amount) {
   }).format(Number(amount) || 0);
 }
 
+function formatMoney(amount, currency = "USD") {
+  const safeCurrency = currency === "INR" ? "INR" : "USD";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: safeCurrency,
+    maximumFractionDigits: 0
+  }).format(Number(amount) || 0);
+}
+
 function renderWeddingNotes(plan) {
   const notes = escapeHtml(plan.reviewNotes || "No review notes added yet.");
   const liveLink = plan.liveLink ? `<br><br><a href="${plan.liveLink}" target="_blank" rel="noreferrer">Open live link</a>` : "";
@@ -1857,7 +2115,8 @@ function renderWeddingNotes(plan) {
       </label>
     </div>
   `;
-  return `${notes}${liveLink}${actualHoursControl}${paymentToggle}`;
+  const teamManager = renderWeddingTeamManager(plan);
+  return `${notes}${liveLink}${actualHoursControl}${paymentToggle}${teamManager}`;
 }
 
 function getWeddingExpectedAmount(plan) {
@@ -1875,12 +2134,176 @@ function getWeddingCurrentAmount(plan) {
 function formatTeamAssignments(assignments) {
   if (!assignments || !assignments.length) return "Not assigned";
   return assignments
-    .map((item) => `${item.name || "Team Member"} (${item.hours || 0}h x ${formatCurrency(item.rate)} = ${formatCurrency(item.amount)}${item.paid ? ", Paid" : ", Pending"})`)
+    .map((item) => {
+      const label = item.name || "Team Member";
+      const hasHours = item.hours !== null && item.hours !== undefined && item.hours !== "";
+      const hasAmount = item.amount !== null && item.amount !== undefined && item.amount !== "";
+      const looksLikePlannedEntry = item.rate && Number(item.hours || 0) === 0 && Number(item.amount || 0) === 0;
+      if ((!hasHours && !hasAmount && item.rate) || looksLikePlannedEntry) {
+        return `${label} (${formatCurrency(item.rate)}/hr, hours to add after event, ${item.paymentStatus || "Pending"}, ${item.dataSharedStatus || "Not Shared"})`;
+      }
+      if (!hasHours && hasAmount) {
+        return `${label} (${formatCurrency(item.amount)}, ${item.paymentStatus || "Pending"}, ${item.dataSharedStatus || "Not Shared"})`;
+      }
+      return `${label} (${item.hours || 0}h x ${formatCurrency(item.rate)} = ${formatCurrency(item.amount)}, ${item.paymentStatus || "Pending"}, ${item.dataSharedStatus || "Not Shared"})`;
+    })
     .join(", ");
 }
 
+function formatCoveredHours(hours) {
+  return hours === null || hours === undefined || hours === "" || Number(hours) === 0 ? "Add after event" : String(hours);
+}
+
 function sumTeamAssignments(assignments) {
-  return (assignments || []).reduce((sum, item) => item.paid ? sum : sum + Number(item.amount || 0), 0);
+  return (assignments || []).reduce((sum, item) => (item.paymentStatus === "Completed" || item.paid) ? sum : sum + Number(item.amount || 0), 0);
+}
+
+function formatMonthValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function formatMonthLabel(monthValue) {
+  if (!monthValue) return "this month";
+  const [year, month] = monthValue.split("-").map(Number);
+  if (!year || !month) return "this month";
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+function createBankAccount(values = {}) {
+  return normalizeBankAccount(values);
+}
+
+function renderOverviewBankAccounts() {
+  if (!bankAccountsList || !bankAccountTemplate) return;
+
+  if (!state.bankAccounts.length) {
+    state.bankAccounts.push(createBankAccount());
+  }
+
+  bankAccountsList.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  state.bankAccounts.forEach((account) => {
+    const node = bankAccountTemplate.content.firstElementChild.cloneNode(true);
+    const nameInput = node.querySelector('[data-name="bankName"]');
+    const balanceInput = node.querySelector('[data-name="bankBalance"]');
+    const removeButton = node.querySelector(".remove-bank-button");
+
+    nameInput.value = account.name || "";
+    balanceInput.value = account.balance || "";
+
+    nameInput.addEventListener("change", (event) => {
+      updateBankAccount(account.id, { name: event.target.value });
+    });
+
+    balanceInput.addEventListener("change", (event) => {
+      updateBankAccount(account.id, { balance: Number(event.target.value) || 0 });
+    });
+
+    removeButton.addEventListener("click", () => removeBankAccount(account.id));
+    fragment.appendChild(node);
+  });
+
+  bankAccountsList.appendChild(fragment);
+}
+
+function updateBankAccount(accountId, updates) {
+  state.bankAccounts = state.bankAccounts.map((account) => (
+    account.id === accountId
+      ? normalizeBankAccount({ ...account, ...updates })
+      : account
+  ));
+  renderOverviewBankAccounts();
+  renderStats();
+  saveState();
+}
+
+function removeBankAccount(accountId) {
+  state.bankAccounts = state.bankAccounts.filter((account) => account.id !== accountId);
+  if (!state.bankAccounts.length) {
+    state.bankAccounts.push(createBankAccount());
+  }
+  renderOverviewBankAccounts();
+  renderStats();
+  saveState();
+}
+
+function renderMonthlySpend() {
+  if (!monthlySpendTotal || !monthlySpendBreakdown || !balanceAfterSpend) return;
+
+  const selectedMonth = overviewMonthInput?.value || overviewMonthCursor || formatMonthValue(new Date());
+  overviewMonthCursor = selectedMonth;
+
+  if (overviewMonthInput && overviewMonthInput.value !== selectedMonth) {
+    overviewMonthInput.value = selectedMonth;
+  }
+
+  if (overviewMonthCaption) {
+    overviewMonthCaption.textContent = `Spending tracked for ${formatMonthLabel(selectedMonth)}.`;
+  }
+
+  const teamSpend = getMonthlyTeamSpend(selectedMonth);
+  const editorSpend = getMonthlyEditorSpend(selectedMonth);
+
+  monthlySpendBreakdown.innerHTML = [
+    { label: "Team payouts", value: formatCurrency(teamSpend) },
+    { label: "Editor payouts", value: editorSpend.label }
+  ].map((item) => (
+    `<div class="overview-spend-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`
+  )).join("");
+
+  monthlySpendTotal.textContent = editorSpend.mixed
+    ? "Mixed currencies"
+    : formatCurrency(teamSpend + editorSpend.amount);
+  balanceAfterSpend.textContent = editorSpend.mixed
+    ? "Mixed currencies"
+    : formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0) - (teamSpend + editorSpend.amount));
+}
+
+function getMonthlyTeamSpend(monthValue) {
+  const weddingSpend = state.weddingPlans.reduce((sum, plan) => (
+    isDateInMonth(plan.weddingDate, monthValue)
+      ? sum + (plan.teamAssignments || []).reduce((teamSum, item) => (
+        item.paymentStatus === "Completed" ? teamSum + Number(item.amount || 0) : teamSum
+      ), 0)
+      : sum
+  ), 0);
+
+  const leadSpend = state.leads.reduce((sum, lead) => (
+    lead.source !== "wedding-plan" && isDateInMonth(lead.eventDate, monthValue)
+      ? sum + (lead.teamAssignments || []).reduce((teamSum, item) => (
+        item.paymentStatus === "Completed" ? teamSum + Number(item.amount || 0) : teamSum
+      ), 0)
+      : sum
+  ), 0);
+
+  return weddingSpend + leadSpend;
+}
+
+function getMonthlyEditorSpend(monthValue) {
+  const paidJobs = state.editorJobs.filter((job) => (
+    job.status === "Paid" && isDateInMonth(job.dueDate || job.eventDate || "", monthValue)
+  ));
+  const currencies = [...new Set(paidJobs.map((job) => job.currency || "USD"))];
+
+  if (currencies.length > 1) {
+    return { amount: 0, label: "Mixed currencies", mixed: true };
+  }
+
+  const currency = currencies[0] || "USD";
+  const amount = paidJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
+  return {
+    amount: currency === "USD" ? amount : 0,
+    label: paidJobs.length ? formatMoney(amount, currency) : formatCurrency(0),
+    mixed: currency !== "USD" && amount > 0
+  };
+}
+
+function isDateInMonth(dateString, monthValue) {
+  if (!dateString || !monthValue) return false;
+  return String(dateString).slice(0, 7) === monthValue;
 }
 
 function countPendingDeliverables(deliverables) {
@@ -1934,6 +2357,94 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function parseOptionalNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function renderWeddingTeamManager(plan) {
+  if (!plan.teamAssignments?.length) return "";
+
+  return `
+    <div class="team-summary-panel">
+      <h4 class="team-summary-title">Team Updates</h4>
+      <div class="team-summary-list">
+        ${plan.teamAssignments.map((item) => `
+          <div class="team-summary-row">
+            <div class="team-summary-row-head">
+              <strong>${escapeHtml(item.name || "Team Member")}</strong>
+              <span>${formatCurrency(item.rate)}/hr</span>
+            </div>
+            <div class="team-summary-grid">
+              <label>
+                Hours Worked
+                <input type="number" min="0" step="0.5" data-role="team-hours" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
+              </label>
+              <label>
+                Amount
+                <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
+              </label>
+              <label>
+                Payment Status
+                <select data-role="team-payment-status" data-member-id="${item.id}">
+                  ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
+                </select>
+              </label>
+              <label>
+                Data Shared
+                <select data-role="team-data-shared" data-member-id="${item.id}">
+                  ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
+                </select>
+              </label>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function updateWeddingTeamAssignment(planId, memberId, updates) {
+  state.weddingPlans = state.weddingPlans.map((plan) => {
+    if (plan.id !== planId) return plan;
+
+    const updatedAssignments = (plan.teamAssignments || []).map((item) => {
+      if (item.id !== memberId) return item;
+      const next = {
+        ...item,
+        ...updates
+      };
+      const hours = parseOptionalNumber(next.hours);
+      const rate = Number(next.rate) || 0;
+      const amount = hours !== null && rate ? hours * rate : parseOptionalNumber(next.amount);
+      const paymentStatus = next.paymentStatus || (next.paid ? "Completed" : "Pending");
+      return {
+        ...next,
+        hours,
+        amount,
+        paymentStatus,
+        paid: paymentStatus === "Completed",
+        dataSharedStatus: next.dataSharedStatus || "Not Shared"
+      };
+    });
+
+    return {
+      ...plan,
+      teamAssignments: updatedAssignments
+    };
+  });
+
+  state.leads = state.leads.map((lead) => {
+    if (!(lead.source === "wedding-plan" && lead.id === planId)) return lead;
+    const plan = state.weddingPlans.find((item) => item.id === planId);
+    return plan ? { ...lead, teamAssignments: plan.teamAssignments } : lead;
+  });
+
+  saveState();
+  renderAll();
 }
 
 function upsertById(list, entry) {

@@ -9,25 +9,17 @@
   <body>
     <div class="public-shell" id="publicShell">
       <header class="public-topbar">
-        <img class="public-topbar-logo" src="assets/logo-white.png" alt="Tales by DVS logo" />
-        <button type="button" class="primary-button open-auth-button">Sign In</button>
       </header>
 
       <main class="public-main">
+        <div class="public-brand-row">
+          <img class="public-hero-logo" src="assets/logo-black.png" alt="Tales by DVS logo" />
+        </div>
         <section class="brand-hero public-hero">
           <div class="brand-hero-card public-hero-card">
-            <img class="brand-hero-logo" src="assets/logo-white.png" alt="Tales by DVS logo" />
             <div class="brand-hero-slides" id="brandHeroSlides" aria-hidden="true"></div>
             <div class="public-hero-copy">
-              <p class="public-kicker">Wedding Films and Photography</p>
-              <h1>Stories with heart, color, culture, and cinematic detail.</h1>
-              <p>
-                Explore the Tales by DVS portfolio, then sign in when you want to step into your private production dashboard.
-              </p>
-              <div class="public-hero-actions">
-                <a class="primary-button public-link-button" href="https://saikrishnagunti.smugmug.com/" target="_blank" rel="noreferrer">View Portfolio</a>
-                <button type="button" class="secondary-button open-auth-button">Open Dashboard</button>
-              </div>
+              <h1>Timeless stories, told with heart and cinematic artistry.</h1>
             </div>
           </div>
         </section>
@@ -39,23 +31,20 @@
           </div>
           <div class="portfolio-grid">
             <a class="portfolio-card portfolio-card-wedding" href="https://saikrishnagunti.smugmug.com/DVSUSA" target="_blank" rel="noreferrer">
-              <span class="portfolio-card-tag">Weddings</span>
-              <strong>DVSUSA Highlights</strong>
-              <p>Signature frames, ceremony details, and full-story coverage.</p>
+              <strong>Event pictures</strong>
+              <p>Babyshowers, Gender Reveal, House warmings etc.</p>
             </a>
             <a class="portfolio-card portfolio-card-couple" href="https://saikrishnagunti.smugmug.com/" target="_blank" rel="noreferrer">
-              <span class="portfolio-card-tag">Couples</span>
-              <strong>Portfolio Homepage</strong>
-              <p>Browse your public SmugMug portfolio and featured sets.</p>
+              <strong>Weddings</strong>
+              <p>Stories with heart. Frames with soul. Moments made cinematic.</p>
             </a>
-            <button type="button" class="portfolio-card portfolio-card-dashboard open-auth-button">
-              <span class="portfolio-card-tag">Private</span>
-              <strong>Client Dashboard</strong>
-              <p>Open your secure production workspace when you want to manage shoots, weddings, editors, and schedules.</p>
-            </button>
           </div>
         </section>
       </main>
+
+      <div class="public-footer-signin">
+        <button type="button" class="public-signin-link open-auth-button">Sign In</button>
+      </div>
     </div>
 
     <div class="auth-shell hidden" id="authShell">
@@ -66,18 +55,25 @@
         <p id="authSubtitle">Access your photography workflow from anywhere once this app is running on the web.</p>
         <div id="authMessage" class="auth-message hidden"></div>
         <form id="authForm" class="auth-form">
-          <label>
+          <label id="authEmailField">
             Email
             <input type="email" name="email" autocomplete="email" required />
           </label>
-          <label>
+          <label id="authPasswordField">
             Password
             <input type="password" name="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <label id="authConfirmField" class="hidden">
+            Confirm Password
+            <input type="password" name="confirmPassword" autocomplete="new-password" minlength="8" />
           </label>
           <button type="submit" class="primary-button" id="authSubmitButton">Sign In</button>
         </form>
         <div class="auth-card-actions">
-          <button type="button" id="authModeToggle" class="auth-toggle">Need an account? Create one</button>
+          <div class="auth-card-links">
+            <button type="button" id="authModeToggle" class="auth-toggle">Need an account? Create one</button>
+            <button type="button" id="authForgotButton" class="auth-toggle auth-forgot-button">Forgot Password?</button>
+          </div>
           <button type="button" id="authCloseButton" class="auth-close-button">Close</button>
         </div>
       </section>
@@ -128,6 +124,50 @@
               <span id="teamDue">$0</span>
               <p>Team Due</p>
             </article>
+          </section>
+
+          <section class="panel overview-money-panel">
+            <div class="panel-heading overview-money-heading">
+              <div>
+                <h2>Money Overview</h2>
+                <p>Track your bank balances and see what you are spending each month.</p>
+              </div>
+              <label class="filter-label month-filter-label">
+                Spending Month
+                <input type="month" id="overviewMonthInput" />
+              </label>
+            </div>
+
+            <div class="overview-money-grid">
+              <article class="overview-money-card">
+                <div class="subsection-header">
+                  <div>
+                    <h3>Bank Balances</h3>
+                    <p>Add the current balance in each bank account.</p>
+                  </div>
+                  <button class="secondary-button" id="addBankAccountButton" type="button">Add Bank</button>
+                </div>
+                <div id="bankAccountsList" class="bank-account-list"></div>
+                <div class="overview-money-total">
+                  <span>Total Balance</span>
+                  <strong id="totalBankBalance">$0</strong>
+                </div>
+              </article>
+
+              <article class="overview-money-card">
+                <h3>Monthly Spending</h3>
+                <p id="overviewMonthCaption">Track what has gone out this month.</p>
+                <div class="overview-money-total">
+                  <span>Total Spend</span>
+                  <strong id="monthlySpendTotal">$0</strong>
+                </div>
+                <div class="overview-money-total overview-money-total-secondary">
+                  <span>Left After Spend</span>
+                  <strong id="balanceAfterSpend">$0</strong>
+                </div>
+                <div id="monthlySpendBreakdown" class="overview-spend-breakdown"></div>
+              </article>
+            </div>
           </section>
         </section>
 
@@ -538,8 +578,15 @@
                   </select>
                 </label>
                 <label>
-                  Amount to pay in USD
+                  Amount to pay
                   <input type="number" name="amountDue" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Payment currency
+                  <select name="editorCurrency">
+                    <option value="USD">USD</option>
+                    <option value="INR">INR</option>
+                  </select>
                 </label>
 
                 <div class="subsection">
@@ -619,7 +666,7 @@
           <p class="schedule-date"></p>
         </div>
         <div class="schedule-grid"></div>
-        <p class="schedule-notes"></p>
+        <div class="schedule-notes"></div>
       </article>
     </template>
 
@@ -628,7 +675,7 @@
         <div class="two-column-form wedding-event-grid">
           <label>
             Event Name
-            <input type="text" data-name="eventName" placeholder="Haldi, Sangeeth, Muhurtam" required />
+            <input type="text" data-name="eventName" placeholder="Haldi, Sangeeth, Mehendi" required />
           </label>
           <label>
             Event Date
@@ -663,23 +710,31 @@
             <input type="text" data-name="memberName" placeholder="Name" />
           </label>
           <label>
-            Total Hours Covered
-            <input type="number" data-name="memberHours" min="0" step="0.5" placeholder="0" />
-          </label>
-          <label>
             Per Hour Rate
             <input type="number" data-name="memberRate" min="0" step="1" placeholder="0" />
           </label>
           <label>
-            Total Amount to be Given
-            <input type="number" data-name="memberAmount" min="0" step="1" placeholder="0" readonly />
-          </label>
-          <label class="checkbox-field">
-            <input type="checkbox" data-name="memberPaid" />
-            <span>Payment completed</span>
+            Planned Amount (optional)
+            <input type="number" data-name="memberAmount" min="0" step="1" placeholder="Optional" />
           </label>
         </div>
         <button type="button" class="delete-button remove-team-button">Remove</button>
+      </div>
+    </template>
+
+    <template id="bankAccountTemplate">
+      <div class="bank-account-item">
+        <div class="team-member-grid">
+          <label>
+            Bank Name
+            <input type="text" data-name="bankName" placeholder="Chase, BofA, HDFC" />
+          </label>
+          <label>
+            Balance
+            <input type="number" data-name="bankBalance" min="0" step="0.01" placeholder="0" />
+          </label>
+        </div>
+        <button type="button" class="delete-button remove-bank-button">Remove</button>
       </div>
     </template>
 
