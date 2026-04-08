@@ -1213,15 +1213,52 @@ textarea {
   border-top: 1px solid rgba(122, 95, 72, 0.12);
 }
 
-.team-summary-title {
-  margin: 0 0 14px;
+.team-summary-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(122, 95, 72, 0.1);
+  cursor: pointer;
+  list-style: none;
+}
+
+.team-summary-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.team-summary-toggle::after {
+  content: "+";
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+.team-summary-panel[open] .team-summary-toggle::after {
+  content: "−";
+}
+
+.team-summary-toggle-title {
   font-size: 1rem;
   color: var(--ink);
+  font-weight: 700;
+}
+
+.team-summary-toggle-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .team-summary-list {
   display: grid;
   gap: 14px;
+  margin-top: 14px;
 }
 
 .team-summary-row {

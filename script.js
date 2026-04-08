@@ -1083,10 +1083,10 @@ function renderStats() {
 
 function buildScheduleItems() {
   const leadItems = state.leads
-    .filter((lead) => lead.eventDate)
+    .filter((lead) => lead.eventDate && lead.source === "manual")
     .map((lead) => ({
       sortDate: lead.eventDate,
-      type: lead.source === "manual" ? "Shoot" : "Wedding Booking",
+      type: "Shoot",
       badgeStatus: lead.status,
       title: `${lead.clientName} - ${lead.eventType}`,
       dateLabel: joinDateTime(lead.eventDate, lead.eventTime),
@@ -1101,34 +1101,10 @@ function buildScheduleItems() {
         { label: "Amount", value: formatCurrency(lead.amount) },
         {
           label: "Team",
-          value: lead.source === "manual"
-            ? formatTeamAssignments(lead.teamAssignments)
-            : PER_EVENT_TEAM_MESSAGE
+          value: formatTeamAssignments(lead.teamAssignments)
         }
       ]
     }));
-
-  const weddingItems = state.weddingPlans.map((plan) => ({
-    sortDate: plan.weddingDate,
-    type: "Wedding Plan",
-    badgeStatus: "Confirmed",
-    title: `${plan.clientName} Wedding`,
-    dateLabel: formatDate(plan.weddingDate),
-    notes: `${[plan.reviewNotes || "No review notes added yet.", buildConflictMessage(getWeddingExclusionIds(plan.id), plan.weddingDate, "")]
-      .filter(Boolean)
-      .map(escapeHtml)
-      .join("<br><br>")}${plan.liveLink ? `<br><br><a href="${plan.liveLink}" target="_blank" rel="noreferrer">Open live link</a>` : ""}`,
-    meta: [
-      { label: "Package", value: plan.packageType || "Not added" },
-      { label: "Hours", value: String(plan.totalHours || 0) },
-      { label: "Rate / Hour", value: formatCurrency(plan.pricePerHour) },
-      { label: "Pre-Wedding", value: plan.hasPreWedding ? formatDate(plan.preWeddingDate) : "No" },
-      { label: "Advance", value: formatCurrency(plan.advanceGiven) },
-      { label: "Pending", value: formatCurrency(plan.pendingAmount) },
-      { label: "Payment", value: plan.isFullyPaid ? "Fully Paid" : "Pending" },
-      { label: "Team", value: PER_EVENT_TEAM_MESSAGE }
-    ]
-  }));
 
   const weddingEventItems = state.weddingPlans.flatMap((plan) => (
     plan.events.map((entry) => ({
@@ -1193,7 +1169,7 @@ function buildScheduleItems() {
     });
   }
 
-  return [...leadItems, ...weddingItems, ...weddingEventItems, ...shootShareItems].sort((left, right) => new Date(left.sortDate) - new Date(right.sortDate));
+  return [...leadItems, ...weddingEventItems, ...shootShareItems].sort((left, right) => new Date(left.sortDate) - new Date(right.sortDate));
 }
 
 function groupScheduleItems(items) {
@@ -1822,11 +1798,9 @@ function addTeamMemberRow(container, values = {}) {
   const item = fragment.querySelector(".team-member-item");
   const nameInput = item.querySelector('[data-name="memberName"]');
   const rateInput = item.querySelector('[data-name="memberRate"]');
-  const amountInput = item.querySelector('[data-name="memberAmount"]');
 
   nameInput.value = values.name || "";
   rateInput.value = values.rate || "";
-  amountInput.value = values.amount ?? "";
 
   item.querySelector(".remove-team-button").addEventListener("click", () => {
     item.remove();
@@ -1842,12 +1816,12 @@ function readTeamRows(container) {
       name: row.querySelector('[data-name="memberName"]').value.trim(),
       hours: null,
       rate: Number(row.querySelector('[data-name="memberRate"]').value) || 0,
-      amount: parseOptionalNumber(row.querySelector('[data-name="memberAmount"]').value),
+      amount: null,
       paid: false,
       paymentStatus: "Pending",
       dataSharedStatus: "Not Shared"
     }))
-    .filter((item) => item.name || item.rate || item.amount !== null);
+    .filter((item) => item.name || item.rate);
 }
 
 function addWeddingEventRow(values = {}) {
@@ -2346,9 +2320,16 @@ function renderWeddingTeamManager(plan) {
   const eventsWithTeam = (plan.events || []).filter((event) => (event.teamAssignments || []).length);
   if (!eventsWithTeam.length) return "";
 
+  const totalMembers = eventsWithTeam.reduce((count, event) => count + (event.teamAssignments || []).length, 0);
+  const eventLabel = `${eventsWithTeam.length} ${eventsWithTeam.length === 1 ? "event" : "events"}`;
+  const memberLabel = `${totalMembers} ${totalMembers === 1 ? "member" : "members"}`;
+
   return `
-    <div class="team-summary-panel">
-      <h4 class="team-summary-title">Team Updates</h4>
+    <details class="team-summary-panel">
+      <summary class="team-summary-toggle">
+        <span class="team-summary-toggle-title">Team Updates</span>
+        <span class="team-summary-toggle-meta">${eventLabel} | ${memberLabel}</span>
+      </summary>
       <div class="team-summary-list">
         ${eventsWithTeam.map((event) => `
           <div class="team-summary-event-block">
@@ -2386,7 +2367,7 @@ function renderWeddingTeamManager(plan) {
           </div>
         `).join("")}
       </div>
-    </div>
+    </details>
   `;
 }
 
