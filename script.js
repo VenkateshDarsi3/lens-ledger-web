@@ -36,7 +36,6 @@ const eventTypeSelect = document.querySelector("#eventTypeSelect");
 const customEventTypeField = document.querySelector("#customEventTypeField");
 const leadStatusSelect = document.querySelector("#leadStatusSelect");
 const leadTeamSection = document.querySelector("#leadTeamSection");
-const leadSearchInput = document.querySelector("#leadSearchInput");
 
 const leadSubmitButton = document.querySelector("#leadSubmitButton");
 const weddingSubmitButton = document.querySelector("#weddingSubmitButton");
@@ -168,7 +167,6 @@ openAuthButtons.forEach((button) => button.addEventListener("click", () => {
 }));
 
 statusFilter.addEventListener("change", renderLeads);
-leadSearchInput.addEventListener("input", renderLeads);
 hasPreWeddingCheckbox.addEventListener("change", syncPreWeddingField);
 eventTypeSelect.addEventListener("change", syncCustomEventField);
 leadStatusSelect.addEventListener("change", syncLeadTeamSection);
@@ -657,6 +655,7 @@ function handleLeadSubmit(event) {
     eventDate: formData.get("eventDate"),
     eventTime: formData.get("eventTime"),
     location: formData.get("location").trim(),
+    pricePerHour: Number(formData.get("pricePerHour")) || 0,
     amount: Number(formData.get("amount")) || 0,
     deliverables: formData.get("deliverables").trim(),
     teamAssignments: readTeamRows(leadTeamList),
@@ -784,7 +783,7 @@ function handleShootShareSubmit(event) {
 
 function renderLeads() {
   const selectedStatus = statusFilter.value;
-  const searchTerm = leadSearchInput.value.trim().toLowerCase();
+  const searchTerm = "";
   const items = (selectedStatus === "All"
     ? state.leads
     : state.leads.filter((lead) => lead.status === selectedStatus))
@@ -819,6 +818,7 @@ function renderLeads() {
       createMetaItem("Service", lead.serviceType || "Not added"),
       createMetaItem("Date", joinDateTime(lead.eventDate, lead.eventTime)),
       createMetaItem("Location", lead.location || "Not added"),
+      createMetaItem("Rate / Hour", lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added"),
       createMetaItem("Amount", formatCurrency(lead.amount)),
       createMetaItem("Deliverables", lead.deliverables || "Not added"),
       createMetaItem(
@@ -1116,6 +1116,7 @@ function buildScheduleItems() {
         { label: "Location", value: lead.location || "Not added" },
         { label: "Contact", value: lead.contact || "Not added" },
         { label: "Service", value: lead.serviceType || "Not added" },
+        { label: "Rate / Hour", value: lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added" },
         { label: "Amount", value: formatCurrency(lead.amount) },
         {
           label: "Team",
@@ -1349,6 +1350,7 @@ function populateLeadForm(lead) {
   leadForm.elements.eventTime.value = /^\d{2}:\d{2}$/.test(lead.eventTime || "") ? lead.eventTime : "";
   leadForm.elements.serviceType.value = lead.serviceType || "Photography";
   leadForm.elements.location.value = lead.location || "";
+  leadForm.elements.pricePerHour.value = lead.pricePerHour || "";
   leadForm.elements.amount.value = lead.amount || "";
   leadForm.elements.deliverables.value = lead.deliverables || "";
   leadForm.elements.status.value = lead.status || "Enquiry";
@@ -1500,8 +1502,7 @@ function syncCustomEventField() {
 }
 
 function syncLeadTeamSection() {
-  const shouldShow = ["Confirmed", "Completed", "Closed"].includes(leadStatusSelect.value);
-  leadTeamSection.classList.toggle("hidden", !shouldShow);
+  leadTeamSection.classList.remove("hidden");
 }
 
 function syncLeadAvailability() {
@@ -1651,6 +1652,7 @@ function matchesLeadSearch(lead, searchTerm) {
     lead.eventType,
     lead.serviceType,
     lead.location,
+    lead.pricePerHour,
     lead.deliverables,
     lead.notes,
     ...(lead.teamAssignments || []).flatMap((item) => [item.name, item.rate, item.hours, item.amount])
@@ -1667,12 +1669,12 @@ function buildGlobalSearchResults(searchTerm) {
   const normalizedSearch = searchTerm.toLowerCase();
   const results = [];
 
-  state.leads.forEach((lead) => {
+  state.leads.filter((lead) => isNonWeddingLead(lead)).forEach((lead) => {
     if (matchesLeadSearch(lead, normalizedSearch)) {
       results.push({
         id: `lead-${lead.id}`,
         tab: "pipeline",
-        type: lead.source === "wedding-plan" ? "Wedding Booking" : "Event Detail",
+        type: "Event Detail",
         title: `${lead.clientName} - ${lead.eventType}`,
         subtitle: [formatDate(lead.eventDate), lead.location || lead.contact || "No extra details"].filter(Boolean).join(" | ")
       });
@@ -1816,6 +1818,7 @@ function normalizeLead(lead) {
   return {
     ...lead,
     serviceType: lead.serviceType || "Photography",
+    pricePerHour: Number(lead.pricePerHour) || 0,
     deliverables: lead.deliverables || "",
     teamAssignments: normalizeTeamAssignments(lead)
   };

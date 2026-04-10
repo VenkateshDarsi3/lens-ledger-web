@@ -247,7 +247,12 @@
                 </label>
 
                 <label>
-                  Package amount in USD
+                  Price Charged Per Hour
+                  <input type="number" name="pricePerHour" min="0" step="1" placeholder="0" />
+                </label>
+
+                <label>
+                  Total / Package Amount in USD
                   <input type="number" name="amount" min="0" step="1" placeholder="0" />
                 </label>
 
@@ -256,7 +261,7 @@
                   <input type="text" name="deliverables" placeholder="Highlight film, reels, album, raw photos" />
                 </label>
 
-                <div class="subsection hidden" id="leadTeamSection">
+                <div class="subsection" id="leadTeamSection">
                   <div class="subsection-header">
                     <div>
                       <h3>Team Payouts</h3>
@@ -296,10 +301,6 @@
                   <h2>Event Details</h2>
                   <p>Track non-wedding events here. Entries are automatically sorted by the nearest event date first.</p>
                 </div>
-                <label class="filter-label">
-                  Search
-                  <input type="search" id="leadSearchInput" placeholder="Client, phone, location, event, team..." />
-                </label>
                 <label class="filter-label">
                   Filter
                   <select id="statusFilter">
