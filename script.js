@@ -144,6 +144,10 @@ const initialState = {
 let state = createEmptyState();
 let calendarCursor = startOfMonth(new Date());
 let overviewMonthCursor = formatMonthValue(new Date());
+const weddingTeamUiState = {
+  openPlans: new Set(),
+  openEvents: new Set()
+};
 
 tabButtons.forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.tab));
@@ -881,6 +885,24 @@ function renderWeddingPlans() {
     notes.querySelector('[data-role="wedding-payment-toggle"]')?.addEventListener("change", (toggleEvent) => {
       updateWeddingPaymentStatus(plan.id, toggleEvent.target.checked);
     });
+    notes.querySelector('[data-role="team-summary-panel"]')?.addEventListener("toggle", (teamPanelEvent) => {
+      if (teamPanelEvent.target.open) {
+        weddingTeamUiState.openPlans.add(plan.id);
+      } else {
+        weddingTeamUiState.openPlans.delete(plan.id);
+      }
+    });
+    notes.querySelectorAll('[data-role="event-team-panel"]').forEach((panel) => {
+      panel.addEventListener("toggle", (eventPanel) => {
+        const eventKey = eventPanel.target.dataset.eventKey;
+        if (!eventKey) return;
+        if (eventPanel.target.open) {
+          weddingTeamUiState.openEvents.add(eventKey);
+        } else {
+          weddingTeamUiState.openEvents.delete(eventKey);
+        }
+      });
+    });
     notes.querySelector('[data-role="wedding-actual-hours"]')?.addEventListener("change", (hoursEvent) => {
       updateWeddingActualHours(plan.id, Number(hoursEvent.target.value) || 0);
     });
@@ -1122,6 +1144,7 @@ function buildScheduleItems() {
         { label: "Service", value: lead.serviceType || "Not added" },
         { label: "Rate / Hour", value: lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added" },
         { label: "Amount", value: formatCurrency(lead.amount) },
+        { label: "Team Due", value: formatCurrency(sumTeamAssignments(lead.teamAssignments)) },
         {
           label: "Team",
           value: formatTeamAssignments(lead.teamAssignments)
@@ -1143,6 +1166,7 @@ function buildScheduleItems() {
       meta: [
         { label: "Location", value: entry.eventLocation || plan.location || "Not added" },
         { label: "Package", value: plan.packageType || "Not added" },
+        { label: "Team Due", value: formatCurrency(sumTeamAssignments(entry.teamAssignments)) },
         { label: "Team", value: formatTeamAssignments(entry.teamAssignments) }
       ]
     }))
@@ -2535,52 +2559,73 @@ function renderWeddingTeamManager(plan) {
   const totalMembers = eventsWithTeam.reduce((count, event) => count + (event.teamAssignments || []).length, 0);
   const eventLabel = `${eventsWithTeam.length} ${eventsWithTeam.length === 1 ? "event" : "events"}`;
   const memberLabel = `${totalMembers} ${totalMembers === 1 ? "member" : "members"}`;
+  const planOpen = weddingTeamUiState.openPlans.has(plan.id);
 
   return `
-    <details class="team-summary-panel">
+    <details class="team-summary-panel" data-role="team-summary-panel" ${planOpen ? "open" : ""}>
       <summary class="team-summary-toggle">
         <span class="team-summary-toggle-title">Team Updates</span>
         <span class="team-summary-toggle-meta">${eventLabel} | ${memberLabel}</span>
       </summary>
       <div class="team-summary-list">
         ${eventsWithTeam.map((event) => `
-          <div class="team-summary-event-block">
-            <h5 class="team-summary-event-title">${escapeHtml(event.eventName || "Wedding Event")}</h5>
-            ${(event.teamAssignments || []).map((item) => `
-              <div class="team-summary-row">
-                <div class="team-summary-row-head">
-                  <strong>${escapeHtml(item.name || "Team Member")}</strong>
-                  <span>${formatCurrency(item.rate)}/hr</span>
-                </div>
-                <div class="team-summary-grid">
-                  <label>
-                    Hours Worked
-                    <input type="number" min="0" step="0.5" data-role="event-team-hours" data-event-id="${event.id}" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
-                  </label>
-                  <label>
-                    Amount
-                    <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
-                  </label>
-                  <label>
-                    Payment Status
-                    <select data-role="event-team-payment-status" data-event-id="${event.id}" data-member-id="${item.id}">
-                      ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
-                    </select>
-                  </label>
-                  <label>
-                    Data Shared
-                    <select data-role="event-team-data-shared" data-event-id="${event.id}" data-member-id="${item.id}">
-                      ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
-                    </select>
-                  </label>
-                </div>
+          <details
+            class="team-summary-event-block"
+            data-role="event-team-panel"
+            data-event-key="${escapeHtml(getWeddingTeamEventKey(plan.id, event.id))}"
+            ${weddingTeamUiState.openEvents.has(getWeddingTeamEventKey(plan.id, event.id)) ? "open" : ""}
+          >
+            <summary class="team-summary-event-summary">
+              <div>
+                <h5 class="team-summary-event-title">${escapeHtml(event.eventName || "Wedding Event")}</h5>
+                <p class="team-summary-event-subtitle">${(event.teamAssignments || []).length} ${(event.teamAssignments || []).length === 1 ? "member" : "members"}</p>
               </div>
-            `).join("")}
-          </div>
+              <div class="team-summary-event-meta">
+                <span>Team Due</span>
+                <strong>${formatCurrency(sumTeamAssignments(event.teamAssignments))}</strong>
+              </div>
+            </summary>
+            <div class="team-summary-event-list">
+              ${(event.teamAssignments || []).map((item) => `
+                <div class="team-summary-row">
+                  <div class="team-summary-row-head">
+                    <strong>${escapeHtml(item.name || "Team Member")}</strong>
+                    <span>${formatCurrency(item.rate)}/hr</span>
+                  </div>
+                  <div class="team-summary-grid">
+                    <label>
+                      Hours Worked
+                      <input type="number" min="0" step="0.5" data-role="event-team-hours" data-event-id="${event.id}" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
+                    </label>
+                    <label>
+                      Amount
+                      <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
+                    </label>
+                    <label>
+                      Payment Status
+                      <select data-role="event-team-payment-status" data-event-id="${event.id}" data-member-id="${item.id}">
+                        ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
+                      </select>
+                    </label>
+                    <label>
+                      Data Shared
+                      <select data-role="event-team-data-shared" data-event-id="${event.id}" data-member-id="${item.id}">
+                        ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </details>
         `).join("")}
       </div>
     </details>
   `;
+}
+
+function getWeddingTeamEventKey(planId, eventId) {
+  return `${planId}:${eventId}`;
 }
 
 function updateWeddingEventTeamAssignment(planId, eventId, memberId, updates) {
