@@ -102,6 +102,7 @@ const teamDue = document.querySelector("#teamDue");
 const totalBankBalance = document.querySelector("#totalBankBalance");
 const monthlySpendTotal = document.querySelector("#monthlySpendTotal");
 const monthlySpendBreakdown = document.querySelector("#monthlySpendBreakdown");
+const teamDueBreakdown = document.querySelector("#teamDueBreakdown");
 const overviewMonthCaption = document.querySelector("#overviewMonthCaption");
 const balanceAfterSpend = document.querySelector("#balanceAfterSpend");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
@@ -1123,6 +1124,7 @@ function renderStats() {
   ), 0));
   totalBankBalance.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
   renderMonthlySpend();
+  renderTeamDueBreakdown();
 }
 
 function buildScheduleItems() {
@@ -2445,6 +2447,78 @@ function renderMonthlySpend() {
   balanceAfterSpend.textContent = editorSpend.mixed
     ? "Mixed currencies"
     : formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0) - (teamSpend + editorSpend.amount));
+}
+
+function renderTeamDueBreakdown() {
+  if (!teamDueBreakdown) return;
+
+  const memberBuckets = buildTeamDueByMember();
+  if (!memberBuckets.length) {
+    teamDueBreakdown.innerHTML = '<p class="overview-team-empty">No unpaid team dues right now.</p>';
+    return;
+  }
+
+  teamDueBreakdown.innerHTML = memberBuckets.map((member) => `
+    <div class="overview-spend-row overview-team-row">
+      <div class="overview-team-copy">
+        <div class="overview-team-header">
+          <strong class="overview-team-name">${escapeHtml(member.name)}</strong>
+          <strong class="overview-team-total-mobile">${formatCurrency(member.total)}</strong>
+        </div>
+        <div class="overview-team-events">
+          ${member.events.map((event) => `
+            <div class="overview-team-event">
+              <span>${escapeHtml(event.label)}</span>
+              <strong>${formatCurrency(event.amount)}</strong>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <strong class="overview-team-total">${formatCurrency(member.total)}</strong>
+    </div>
+  `).join("");
+}
+
+function buildTeamDueByMember() {
+  const confirmedStatuses = new Set(["Confirmed", "Completed"]);
+  const buckets = new Map();
+
+  const addDue = (member, eventLabel, amount) => {
+    const name = String(member?.name || "").trim();
+    const numericAmount = Number(amount || 0);
+    if (!name || numericAmount <= 0) return;
+
+    const key = name.toLowerCase();
+    const existing = buckets.get(key) || { name, total: 0, events: [] };
+    existing.total += numericAmount;
+    existing.events.push({ label: eventLabel, amount: numericAmount });
+    buckets.set(key, existing);
+  };
+
+  state.leads.forEach((lead) => {
+    if (!confirmedStatuses.has(lead.status) || lead.source === "wedding-plan") return;
+
+    (lead.teamAssignments || []).forEach((item) => {
+      if (item.paymentStatus === "Completed" || item.paid) return;
+      addDue(item, `${lead.clientName} - ${lead.eventType}`, item.amount);
+    });
+  });
+
+  state.weddingPlans.forEach((plan) => {
+    (plan.events || []).forEach((event) => {
+      (event.teamAssignments || []).forEach((item) => {
+        if (item.paymentStatus === "Completed" || item.paid) return;
+        addDue(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`, item.amount);
+      });
+    });
+  });
+
+  return [...buckets.values()]
+    .map((member) => ({
+      ...member,
+      events: member.events.sort((left, right) => right.amount - left.amount || left.label.localeCompare(right.label))
+    }))
+    .sort((left, right) => right.total - left.total || left.name.localeCompare(right.name));
 }
 
 function getMonthlyTeamSpend(monthValue) {
