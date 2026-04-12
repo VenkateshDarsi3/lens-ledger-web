@@ -1094,7 +1094,11 @@ function renderStats() {
     : unpaidEditorCurrencies.length === 1
       ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0), unpaidEditorCurrencies[0])
       : formatCurrency(0);
-  teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => lead.status === "Completed" ? sum + getLeadTeamDue(lead) : sum, 0));
+  teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => (
+    confirmedStatuses.has(lead.status)
+      ? sum + getLeadTeamDue(lead)
+      : sum
+  ), 0));
   totalBankBalance.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
   renderMonthlySpend();
 }
