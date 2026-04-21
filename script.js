@@ -24,6 +24,8 @@ const EDITOR_CURRENCIES = ["USD", "INR"];
 const TEAM_PAYMENT_STATUSES = ["Pending", "Completed"];
 const TEAM_DATA_SHARED_STATUSES = ["Not Shared", "Shared"];
 const PER_EVENT_TEAM_MESSAGE = "Assigned per event";
+const INACTIVITY_LIMIT_MS = 3 * 60 * 1000;
+const INACTIVITY_EVENTS = ["click", "keydown", "mousemove", "touchstart", "scroll"];
 
 const tabButtons = document.querySelectorAll(".tab-button");
 const tabPanels = document.querySelectorAll(".tab-panel");
@@ -133,6 +135,7 @@ let authMode = "login";
 let currentUser = null;
 let saveTimerId = null;
 let pendingSavePromise = Promise.resolve();
+let inactivityTimerId = null;
 
 const initialState = {
   leads: [],
@@ -171,10 +174,10 @@ openAuthButtons.forEach((button) => button.addEventListener("click", () => {
   showAuthShell();
 }));
 
-statusFilter.addEventListener("change", renderLeads);
+statusFilter?.addEventListener("change", renderLeads);
 hasPreWeddingCheckbox.addEventListener("change", syncPreWeddingField);
 eventTypeSelect.addEventListener("change", syncCustomEventField);
-leadStatusSelect.addEventListener("change", syncLeadTeamSection);
+leadStatusSelect?.addEventListener("change", syncLeadTeamSection);
 exportCalendarButton.addEventListener("click", exportCalendar);
 addLeadTeamMemberButton.addEventListener("click", () => addTeamMemberRow(leadTeamList));
 addWeddingEventButton.addEventListener("click", () => addWeddingEventRow());
@@ -209,6 +212,8 @@ calendarNextButton.addEventListener("click", () => {
 
 leadForm.elements.eventDate.addEventListener("input", syncLeadAvailability);
 leadForm.elements.eventTime.addEventListener("input", syncLeadAvailability);
+leadForm.elements.amount.addEventListener("input", syncLeadPaymentFields);
+leadForm.elements.advanceGiven.addEventListener("input", syncLeadPaymentFields);
 weddingForm.elements.weddingDate.addEventListener("input", () => {
   syncWeddingPaymentFields();
   syncWeddingAvailability();
@@ -216,13 +221,17 @@ weddingForm.elements.weddingDate.addEventListener("input", () => {
 weddingForm.elements.pricePerHour.addEventListener("input", syncWeddingPaymentFields);
 weddingForm.elements.expectedHours.addEventListener("input", syncWeddingPaymentFields);
 weddingForm.elements.advanceGiven.addEventListener("input", syncWeddingPaymentFields);
-weddingForm.elements.secondPayment.addEventListener("input", syncWeddingPaymentFields);
-weddingForm.elements.finalPayment.addEventListener("input", syncWeddingPaymentFields);
 shootShareForm.elements.date.addEventListener("input", syncShootShareAvailability);
 shootShareForm.elements.time.addEventListener("input", syncShootShareAvailability);
 shootShareForm.elements.ratePerHour.addEventListener("input", syncShootSharePaymentFields);
 shootShareForm.elements.totalHours.addEventListener("input", syncShootSharePaymentFields);
 shootShareForm.elements.paymentReceived.addEventListener("input", syncShootSharePaymentFields);
+editorForm.elements.amountDue.addEventListener("input", syncEditorPaymentFields);
+editorForm.elements.advancePaid.addEventListener("input", syncEditorPaymentFields);
+
+INACTIVITY_EVENTS.forEach((eventName) => {
+  window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+});
 
 renderCalendarWeekdays();
 initializeBrandHeroSlideshow();
@@ -356,6 +365,7 @@ function initializeForms() {
   }
   syncCustomEventField();
   syncLeadTeamSection();
+  syncLeadPaymentFields();
   syncLeadAvailability();
   syncWeddingAvailability();
   syncShootShareAvailability();
@@ -393,6 +403,7 @@ function showAppShell() {
   appShell.classList.remove("hidden");
   publicShell.classList.add("hidden");
   hideAuthShell();
+  resetInactivityTimer();
 }
 
 function showAuthShell() {
@@ -407,6 +418,7 @@ function showPublicLanding() {
   publicShell.classList.remove("hidden");
   appShell.classList.add("hidden");
   hideAuthShell();
+  clearInactivityTimer();
 }
 
 function showAuthMessage(message) {
@@ -417,6 +429,27 @@ function showAuthMessage(message) {
 function clearAuthMessage() {
   authMessage.textContent = "";
   authMessage.classList.add("hidden");
+}
+
+function resetInactivityTimer() {
+  if (!currentUser) return;
+  clearInactivityTimer();
+  inactivityTimerId = window.setTimeout(handleInactivityLogout, INACTIVITY_LIMIT_MS);
+}
+
+function clearInactivityTimer() {
+  if (!inactivityTimerId) return;
+  window.clearTimeout(inactivityTimerId);
+  inactivityTimerId = null;
+}
+
+async function handleInactivityLogout() {
+  if (!currentUser) return;
+  await handleLogout();
+  authMode = "login";
+  syncAuthMode();
+  showAuthMessage("You were logged out after 3 minutes of inactivity.");
+  showAuthShell();
 }
 
 function getResetTokenFromUrl() {
@@ -539,6 +572,7 @@ async function handleAuthSubmit(event) {
     authForm.reset();
     clearResetTokenFromUrl();
     showAppShell();
+    resetInactivityTimer();
     setSyncStatus("Connected");
     await loadRemoteState();
   } catch (error) {
@@ -561,6 +595,7 @@ async function handleLogout() {
   } catch (error) {
     console.error(error);
   } finally {
+    clearInactivityTimer();
     currentUser = null;
     accountEmail.textContent = "Not signed in";
     state = createEmptyState();
@@ -662,9 +697,11 @@ function handleLeadSubmit(event) {
     location: formData.get("location").trim(),
     pricePerHour: Number(formData.get("pricePerHour")) || 0,
     amount: Number(formData.get("amount")) || 0,
+    advanceGiven: Number(formData.get("advanceGiven")) || 0,
+    pendingAmount: Number(formData.get("pendingAmount")) || 0,
     deliverables: formData.get("deliverables").trim(),
     teamAssignments: readTeamRows(leadTeamList),
-    status: formData.get("status"),
+    status: formData.get("status") || "Confirmed",
     notes: formData.get("notes").trim(),
     source: "manual"
   };
@@ -701,11 +738,11 @@ function handleWeddingSubmit(event) {
     expectedCrowd: Number(formData.get("expectedCrowd")) || 0,
     liveLink: formData.get("liveLink").trim(),
     advanceGiven: Number(formData.get("advanceGiven")) || 0,
-    advanceDate: formData.get("advanceDate"),
-    secondPayment: Number(formData.get("secondPayment")) || 0,
-    secondPaymentDate: formData.get("secondPaymentDate"),
-    finalPayment: Number(formData.get("finalPayment")) || 0,
-    finalPaymentDate: formData.get("finalPaymentDate"),
+    advanceDate: existingPlan?.advanceDate || "",
+    secondPayment: 0,
+    secondPaymentDate: "",
+    finalPayment: 0,
+    finalPaymentDate: "",
     pendingAmount: Number(formData.get("pendingAmount")) || 0,
     isFullyPaid: Number(formData.get("pendingAmount")) <= 0,
     hasPreWedding: hasPreWeddingCheckbox.checked,
@@ -751,6 +788,8 @@ function handleEditorSubmit(event) {
     dueDate: formData.get("dueDate"),
     status: formData.get("status"),
     amountDue: Number(formData.get("amountDue")) || 0,
+    advancePaid: Number(formData.get("advancePaid")) || 0,
+    pendingAmount: Number(formData.get("pendingAmount")) || 0,
     currency: EDITOR_CURRENCIES.includes(formData.get("editorCurrency")) ? formData.get("editorCurrency") : "USD",
     editorPackage: formData.get("editorPackage"),
     deliverables: readEditorDeliverables()
@@ -787,7 +826,7 @@ function handleShootShareSubmit(event) {
 }
 
 function renderLeads() {
-  const selectedStatus = statusFilter.value;
+  const selectedStatus = statusFilter?.value || "All";
   const searchTerm = "";
   const items = (selectedStatus === "All"
     ? state.leads
@@ -807,14 +846,15 @@ function renderLeads() {
     const meta = fragment.querySelector(".lead-meta");
     const notes = fragment.querySelector(".lead-notes");
     const statusSelect = fragment.querySelector(".status-select");
+    const leadActions = fragment.querySelector(".lead-actions");
     const editButton = fragment.querySelector(".edit-button");
     const deleteButton = fragment.querySelector(".delete-button");
 
-    badge.textContent = lead.status;
-    badge.classList.add(getBadgeClass(lead.status));
+    badge.textContent = lead.eventType || "Event";
+    badge.classList.add("status-confirmed");
     title.textContent = lead.clientName;
     notes.textContent = lead.notes || "No notes added yet.";
-    statusSelect.innerHTML = buildOptions(LEAD_STATUSES, lead.status);
+    leadActions.classList.add("hidden");
 
     meta.innerHTML = [
       createMetaItem("Source", lead.source === "manual" ? "Manual" : "Wedding Planner"),
@@ -825,6 +865,8 @@ function renderLeads() {
       createMetaItem("Location", lead.location || "Not added"),
       createMetaItem("Rate / Hour", lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added"),
       createMetaItem("Amount", formatCurrency(lead.amount)),
+      createMetaItem("Advance", formatCurrency(lead.advanceGiven)),
+      createMetaItem("Pending", formatCurrency(lead.pendingAmount)),
       createMetaItem("Deliverables", lead.deliverables || "Not added"),
       createMetaItem(
         "Team",
@@ -834,9 +876,6 @@ function renderLeads() {
       )
     ].join("");
 
-    statusSelect.addEventListener("change", (statusEvent) => {
-      updateLeadStatus(lead.id, statusEvent.target.value);
-    });
     editButton.addEventListener("click", () => populateLeadForm(lead));
     deleteButton.addEventListener("click", () => deleteLead(lead.id));
 
@@ -875,9 +914,6 @@ function renderWeddingPlans() {
       createMetaItem("Actual Total", formatCurrency(getWeddingActualAmount(plan))),
       createMetaItem("Pre-Wedding", plan.hasPreWedding ? formatDate(plan.preWeddingDate) : "No"),
       createMetaItem("Advance", formatCurrency(plan.advanceGiven)),
-      createMetaItem("Second Payment", formatCurrency(plan.secondPayment)),
-      createMetaItem("Final Payment", formatCurrency(plan.finalPayment)),
-      createMetaItem("Received", formatCurrency(getWeddingTotalReceived(plan))),
       createMetaItem("Pending", formatCurrency(plan.pendingAmount)),
       createMetaItem("Payment", getWeddingPaymentStatus(plan)),
       createMetaItem("Team", PER_EVENT_TEAM_MESSAGE)
@@ -1070,7 +1106,9 @@ function renderEditorJobs() {
     meta.innerHTML = [
       createMetaItem("Editor", job.editorName),
       createMetaItem("Due", formatDate(job.dueDate)),
-      createMetaItem("Amount", formatMoney(job.amountDue, job.currency)),
+      createMetaItem("Total Amount", formatMoney(job.amountDue, job.currency)),
+      createMetaItem("Advance Paid", formatMoney(job.advancePaid, job.currency)),
+      createMetaItem("Pending Amount", formatMoney(job.pendingAmount, job.currency)),
       createMetaItem("Currency", job.currency || "USD"),
       createMetaItem("Package", job.editorPackage || "Custom"),
       createMetaItem("Pending", String(countPendingDeliverables(job.deliverables)))
@@ -1094,31 +1132,32 @@ function renderEditorJobs() {
 
 function renderStats() {
   const confirmedStatuses = new Set(["Confirmed", "Completed"]);
-  const leadRevenue = state.leads.reduce((sum, lead) => confirmedStatuses.has(lead.status) ? sum + Number(lead.amount || 0) : sum, 0);
+  const isBookedLead = (lead) => lead.source === "manual" || confirmedStatuses.has(lead.status);
+  const leadRevenue = state.leads.reduce((sum, lead) => isBookedLead(lead) ? sum + Number(lead.amount || 0) : sum, 0);
   const shootShareRevenue = state.shootShareJobs.reduce((sum, job) => sum + Number(job.totalAmount || 0), 0);
   const revenue = leadRevenue + shootShareRevenue;
   const totalEditorCost = state.editorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
   const hasNonUsdEditorAmounts = state.editorJobs.some((job) => Number(job.amountDue || 0) > 0 && (job.currency || "USD") !== "USD");
-  const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && Number(job.amountDue || 0) > 0);
+  const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && getEditorPendingAmount(job) > 0);
   const unpaidEditorCurrencies = [...new Set(unpaidEditorJobs.map((job) => job.currency || "USD"))];
   const totalTeamCost = state.leads.reduce((sum, lead) => (
-    confirmedStatuses.has(lead.status)
+    isBookedLead(lead)
       ? sum + getLeadTeamCost(lead)
       : sum
   ), 0);
   const profit = revenue - totalEditorCost - totalTeamCost;
 
   totalEnquiries.textContent = state.leads.length;
-  totalConfirmed.textContent = state.leads.filter((lead) => confirmedStatuses.has(lead.status)).length;
+  totalConfirmed.textContent = state.leads.filter(isBookedLead).length;
   totalRevenue.textContent = formatCurrency(revenue);
   totalProfit.textContent = hasNonUsdEditorAmounts ? "Check currencies" : formatCurrency(profit);
   editorDue.textContent = unpaidEditorCurrencies.length > 1
     ? "Mixed currencies"
     : unpaidEditorCurrencies.length === 1
-      ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0), unpaidEditorCurrencies[0])
+      ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + getEditorPendingAmount(job), 0), unpaidEditorCurrencies[0])
       : formatCurrency(0);
   teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => (
-    confirmedStatuses.has(lead.status)
+    isBookedLead(lead)
       ? sum + getLeadTeamDue(lead)
       : sum
   ), 0));
@@ -1146,6 +1185,8 @@ function buildScheduleItems() {
         { label: "Service", value: lead.serviceType || "Not added" },
         { label: "Rate / Hour", value: lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added" },
         { label: "Amount", value: formatCurrency(lead.amount) },
+        { label: "Advance", value: formatCurrency(lead.advanceGiven) },
+        { label: "Pending", value: formatCurrency(lead.pendingAmount) },
         { label: "Team Due", value: formatCurrency(sumTeamAssignments(lead.teamAssignments)) },
         {
           label: "Team",
@@ -1382,14 +1423,19 @@ function populateLeadForm(lead) {
   leadForm.elements.location.value = lead.location || "";
   leadForm.elements.pricePerHour.value = lead.pricePerHour || "";
   leadForm.elements.amount.value = lead.amount || "";
+  leadForm.elements.advanceGiven.value = lead.advanceGiven || "";
+  leadForm.elements.pendingAmount.value = lead.pendingAmount || "";
   leadForm.elements.deliverables.value = lead.deliverables || "";
-  leadForm.elements.status.value = lead.status || "Enquiry";
+  if (leadForm.elements.status) {
+    leadForm.elements.status.value = lead.status || "Confirmed";
+  }
   leadForm.elements.notes.value = lead.notes || "";
   leadTeamList.innerHTML = "";
   (lead.teamAssignments || []).forEach((assignment) => addTeamMemberRow(leadTeamList, assignment));
   if (!leadTeamList.children.length) addTeamMemberRow(leadTeamList);
   syncCustomEventField();
   syncLeadTeamSection();
+  syncLeadPaymentFields();
   syncLeadAvailability();
   leadSubmitButton.textContent = "Update entry";
   leadCancelEditButton.classList.remove("hidden");
@@ -1410,11 +1456,6 @@ function populateWeddingForm(plan) {
   weddingForm.elements.expectedCrowd.value = plan.expectedCrowd || "";
   weddingForm.elements.liveLink.value = plan.liveLink || "";
   weddingForm.elements.advanceGiven.value = plan.advanceGiven || "";
-  weddingForm.elements.advanceDate.value = plan.advanceDate || "";
-  weddingForm.elements.secondPayment.value = plan.secondPayment || "";
-  weddingForm.elements.secondPaymentDate.value = plan.secondPaymentDate || "";
-  weddingForm.elements.finalPayment.value = plan.finalPayment || "";
-  weddingForm.elements.finalPaymentDate.value = plan.finalPaymentDate || "";
   weddingForm.elements.pendingAmount.value = plan.pendingAmount || "";
   hasPreWeddingCheckbox.checked = Boolean(plan.hasPreWedding);
   weddingForm.elements.preWeddingDate.value = plan.preWeddingDate || "";
@@ -1439,6 +1480,8 @@ function populateEditorForm(job) {
   editorForm.elements.dueDate.value = job.dueDate || "";
   editorForm.elements.status.value = job.status || "Pending";
   editorForm.elements.amountDue.value = job.amountDue || "";
+  editorForm.elements.advancePaid.value = job.advancePaid || "";
+  editorForm.elements.pendingAmount.value = job.pendingAmount || "";
   editorForm.elements.editorCurrency.value = job.currency || "USD";
   editorForm.elements.editorPackage.value = job.editorPackage || "";
   editorDeliverableList.innerHTML = "";
@@ -1446,6 +1489,7 @@ function populateEditorForm(job) {
   if (!editorDeliverableList.children.length) addEditorDeliverableRow();
   editorSubmitButton.textContent = "Update editor task";
   editorCancelEditButton.classList.remove("hidden");
+  syncEditorPaymentFields();
   setActiveTab("editor");
 }
 
@@ -1475,9 +1519,12 @@ function resetLeadForm() {
   leadForm.elements.eventType.value = "Engagement";
   leadForm.elements.customEventType.value = "";
   leadForm.elements.serviceType.value = "Photography";
-  leadForm.elements.status.value = "Enquiry";
+  if (leadForm.elements.status) {
+    leadForm.elements.status.value = "Confirmed";
+  }
   syncCustomEventField();
   syncLeadTeamSection();
+  syncLeadPaymentFields();
   syncLeadAvailability();
   leadSubmitButton.textContent = "Save entry";
   leadCancelEditButton.classList.add("hidden");
@@ -1501,6 +1548,7 @@ function resetEditorForm() {
   editorForm.reset();
   editorForm.elements.editorJobId.value = "";
   editorForm.elements.editorCurrency.value = "USD";
+  syncEditorPaymentFields();
   editorDeliverableList.innerHTML = "";
   addEditorDeliverableRow();
   editorSubmitButton.textContent = "Add editor task";
@@ -1544,14 +1592,17 @@ function syncLeadAvailability() {
   renderAvailabilityAlert(leadAvailabilityAlert, conflicts);
 }
 
+function syncLeadPaymentFields() {
+  const total = Number(leadForm.elements.amount.value) || 0;
+  const advance = Number(leadForm.elements.advanceGiven.value) || 0;
+  leadForm.elements.pendingAmount.value = String(Math.max(total - advance, 0));
+}
+
 function syncWeddingPaymentFields() {
   const total = (Number(weddingForm.elements.pricePerHour.value) || 0) * (Number(weddingForm.elements.expectedHours.value) || 0);
   const advance = Number(weddingForm.elements.advanceGiven.value) || 0;
-  const secondPayment = Number(weddingForm.elements.secondPayment.value) || 0;
-  const finalPayment = Number(weddingForm.elements.finalPayment.value) || 0;
-  const received = advance + secondPayment + finalPayment;
   weddingForm.elements.totalAmount.value = total ? String(total) : "";
-  weddingForm.elements.pendingAmount.value = String(Math.max(total - received, 0));
+  weddingForm.elements.pendingAmount.value = String(Math.max(total - advance, 0));
 }
 
 function syncWeddingAvailability() {
@@ -1569,6 +1620,12 @@ function syncShootSharePaymentFields() {
   const received = Number(shootShareForm.elements.paymentReceived.value) || 0;
   shootShareForm.elements.totalAmount.value = total ? String(total) : "";
   shootShareForm.elements.pendingPayment.value = String(Math.max(total - received, 0));
+}
+
+function syncEditorPaymentFields() {
+  const total = Number(editorForm.elements.amountDue.value) || 0;
+  const advance = Number(editorForm.elements.advancePaid.value) || 0;
+  editorForm.elements.pendingAmount.value = String(Math.max(total - advance, 0));
 }
 
 function syncShootShareAvailability() {
@@ -1845,10 +1902,18 @@ function getWeddingExclusionIds(weddingId) {
 }
 
 function normalizeLead(lead) {
+  const amount = Number(lead.amount) || 0;
+  const advanceGiven = Number(lead.advanceGiven) || 0;
   return {
     ...lead,
     serviceType: lead.serviceType || "Photography",
     pricePerHour: Number(lead.pricePerHour) || 0,
+    amount,
+    advanceGiven,
+    pendingAmount: Number.isFinite(Number(lead.pendingAmount))
+      ? Number(lead.pendingAmount)
+      : Math.max(amount - advanceGiven, 0),
+    status: lead.status || "Confirmed",
     deliverables: lead.deliverables || "",
     teamAssignments: normalizeTeamAssignments(lead)
   };
@@ -1868,23 +1933,28 @@ function isNonWeddingLead(lead) {
 
 function normalizeWeddingPlan(plan) {
   const inheritedAssignments = normalizeTeamAssignments(plan);
+  const pricePerHour = Number(plan.pricePerHour) || 0;
+  const expectedHours = Number(plan.expectedHours) || 0;
+  const totalHours = Number(plan.totalHours) || 0;
+  const advanceGiven = Number(plan.advanceGiven) || 0;
+  const currentTotal = (totalHours > 0 ? totalHours : expectedHours) * pricePerHour;
   return {
     ...plan,
     packageType: plan.packageType || "Silver",
     deliverables: plan.deliverables || "",
-    pricePerHour: Number(plan.pricePerHour) || 0,
-    expectedHours: Number(plan.expectedHours) || 0,
-    totalHours: Number(plan.totalHours) || 0,
+    pricePerHour,
+    expectedHours,
+    totalHours,
     expectedCrowd: Number(plan.expectedCrowd) || 0,
     liveLink: plan.liveLink || "",
-    advanceGiven: Number(plan.advanceGiven) || 0,
+    advanceGiven,
     advanceDate: plan.advanceDate || "",
-    secondPayment: Number(plan.secondPayment) || 0,
+    secondPayment: 0,
     secondPaymentDate: plan.secondPaymentDate || "",
-    finalPayment: Number(plan.finalPayment) || 0,
+    finalPayment: 0,
     finalPaymentDate: plan.finalPaymentDate || "",
-    pendingAmount: Number(plan.pendingAmount) || 0,
-    isFullyPaid: Boolean(plan.isFullyPaid),
+    pendingAmount: Math.max(currentTotal - advanceGiven, 0),
+    isFullyPaid: Boolean(plan.isFullyPaid) || Math.max(currentTotal - advanceGiven, 0) <= 0,
     hasPreWedding: Boolean(plan.hasPreWedding),
     preWeddingDate: plan.preWeddingDate || "",
     reviewNotes: plan.reviewNotes || "",
@@ -1925,8 +1995,16 @@ function normalizeWeddingEvent(event, inheritedAssignments = []) {
 }
 
 function normalizeEditorJob(job) {
+  const amountDue = Number(job.amountDue) || 0;
+  const advancePaid = Number(job.advancePaid) || 0;
+  const pendingAmount = Number.isFinite(Number(job.pendingAmount))
+    ? Number(job.pendingAmount)
+    : Math.max(amountDue - advancePaid, 0);
   return {
     ...job,
+    amountDue,
+    advancePaid,
+    pendingAmount,
     currency: EDITOR_CURRENCIES.includes(job.currency) ? job.currency : "USD",
     editorPackage: job.editorPackage || "",
     deliverables: normalizeEditorDeliverables(job)
@@ -2262,16 +2340,6 @@ function formatMoney(amount, currency = "USD") {
 function renderWeddingNotes(plan) {
   const notes = escapeHtml(plan.reviewNotes || "No review notes added yet.");
   const liveLink = plan.liveLink ? `<br><br><a href="${plan.liveLink}" target="_blank" rel="noreferrer">Open live link</a>` : "";
-  const paymentTimeline = `
-    <div class="payment-timeline">
-      <strong class="payment-timeline-title">Payment Timeline</strong>
-      <div class="payment-timeline-grid">
-        ${renderPaymentTimelineItem("Advance", plan.advanceGiven, plan.advanceDate)}
-        ${renderPaymentTimelineItem("Second Payment", plan.secondPayment, plan.secondPaymentDate)}
-        ${renderPaymentTimelineItem("Final Payment", plan.finalPayment, plan.finalPaymentDate)}
-      </div>
-    </div>
-  `;
   const actualHoursControl = `
     <div class="summary-field-row">
       <label>
@@ -2289,7 +2357,7 @@ function renderWeddingNotes(plan) {
     </div>
   `;
   const teamManager = renderWeddingTeamManager(plan);
-  return `${notes}${liveLink}${paymentTimeline}${actualHoursControl}${paymentToggle}${teamManager}`;
+  return `${notes}${liveLink}${actualHoursControl}${paymentToggle}${teamManager}`;
 }
 
 function getWeddingExpectedAmount(plan) {
@@ -2305,7 +2373,14 @@ function getWeddingCurrentAmount(plan) {
 }
 
 function getWeddingTotalReceived(plan) {
-  return (Number(plan.advanceGiven) || 0) + (Number(plan.secondPayment) || 0) + (Number(plan.finalPayment) || 0);
+  return Number(plan.advanceGiven) || 0;
+}
+
+function getEditorPendingAmount(job) {
+  const amountDue = Number(job.amountDue) || 0;
+  const advancePaid = Number(job.advancePaid) || 0;
+  const savedPending = Number(job.pendingAmount);
+  return Number.isFinite(savedPending) ? savedPending : Math.max(amountDue - advancePaid, 0);
 }
 
 function getWeddingPaymentStatus(plan) {
@@ -2496,7 +2571,7 @@ function buildTeamDueByMember() {
   };
 
   state.leads.forEach((lead) => {
-    if (!confirmedStatuses.has(lead.status) || lead.source === "wedding-plan") return;
+    if (lead.source === "wedding-plan" || !(lead.source === "manual" || confirmedStatuses.has(lead.status))) return;
 
     (lead.teamAssignments || []).forEach((item) => {
       if (item.paymentStatus === "Completed" || item.paid) return;

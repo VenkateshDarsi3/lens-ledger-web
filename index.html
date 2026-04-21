@@ -263,6 +263,16 @@
                 </label>
 
                 <label>
+                  Advance Given
+                  <input type="number" name="advanceGiven" min="0" step="1" placeholder="0" />
+                </label>
+
+                <label>
+                  Pending Amount
+                  <input type="number" name="pendingAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+
+                <label>
                   Deliverables
                   <input type="text" name="deliverables" placeholder="Highlight film, reels, album, raw photos" />
                 </label>
@@ -277,17 +287,6 @@
                   </div>
                   <div id="leadTeamList" class="team-list"></div>
                 </div>
-
-                <label>
-                  Status
-                  <select name="status" id="leadStatusSelect">
-                    <option value="Enquiry">Enquiry</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </label>
 
                 <label>
                   Notes
@@ -307,17 +306,6 @@
                   <h2>Event Details</h2>
                   <p>Track non-wedding events here. Entries are automatically sorted by the nearest event date first.</p>
                 </div>
-                <label class="filter-label">
-                  Filter
-                  <select id="statusFilter">
-                    <option value="All">All</option>
-                    <option value="Enquiry">Enquiry</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </label>
               </div>
 
               <div id="pipelineEmptyState" class="empty-state">
@@ -390,26 +378,6 @@
                 <label>
                   Advance Given
                   <input type="number" name="advanceGiven" min="0" step="1" placeholder="0" />
-                </label>
-                <label>
-                  Advance Date
-                  <input type="date" name="advanceDate" />
-                </label>
-                <label>
-                  Second Payment
-                  <input type="number" name="secondPayment" min="0" step="1" placeholder="0" />
-                </label>
-                <label>
-                  Second Payment Date
-                  <input type="date" name="secondPaymentDate" />
-                </label>
-                <label>
-                  Final Payment
-                  <input type="number" name="finalPayment" min="0" step="1" placeholder="0" />
-                </label>
-                <label>
-                  Final Payment Date
-                  <input type="date" name="finalPaymentDate" />
                 </label>
                 <label>
                   Pending Amount
@@ -607,6 +575,14 @@
                 <label>
                   Amount to pay
                   <input type="number" name="amountDue" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Advance Paid
+                  <input type="number" name="advancePaid" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Pending Amount
+                  <input type="number" name="pendingAmount" min="0" step="1" placeholder="0" readonly />
                 </label>
                 <label>
                   Payment currency
