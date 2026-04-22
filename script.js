@@ -181,7 +181,7 @@ weddingForm.addEventListener("submit", handleWeddingSubmit);
 shootShareForm.addEventListener("submit", handleShootShareSubmit);
 editorForm.addEventListener("submit", handleEditorSubmit);
 authForm.addEventListener("submit", handleAuthSubmit);
-authModeToggle.addEventListener("click", toggleAuthMode);
+authModeToggle?.addEventListener("click", toggleAuthMode);
 logoutButton.addEventListener("click", handleLogout);
 authCloseButton.addEventListener("click", hideAuthShell);
 authBackdrop.addEventListener("click", hideAuthShell);
@@ -516,7 +516,10 @@ function setAuthFieldState(field, visible, options = {}) {
 }
 
 function syncAuthMode() {
-  const isSignup = authMode === "signup";
+  if (authMode === "signup") {
+    authMode = "login";
+  }
+  const isSignup = false;
   const isReset = authMode === "reset";
 
   if (isSignup) {
@@ -528,12 +531,18 @@ function syncAuthMode() {
     authTitle.textContent = "Create a new password";
     authSubtitle.textContent = "Set a new password for your dashboard account.";
     authSubmitButton.textContent = "Reset Password";
-    authModeToggle.textContent = "Back to sign in";
+    if (authModeToggle) {
+      authModeToggle.textContent = "Back to sign in";
+      authModeToggle.classList.remove("hidden");
+    }
   } else {
     authTitle.textContent = "Sign in to your dashboard";
     authSubtitle.textContent = "Access your photography workflow from anywhere once this app is running on the web.";
     authSubmitButton.textContent = "Sign In";
-    authModeToggle.textContent = "Need an account? Create one";
+    if (authModeToggle) {
+      authModeToggle.textContent = "Back to sign in";
+      authModeToggle.classList.add("hidden");
+    }
   }
 
   setAuthFieldState(authEmailField, !isReset, {
@@ -551,12 +560,8 @@ function syncAuthMode() {
 }
 
 function toggleAuthMode() {
-  if (authMode === "login") {
-    authMode = "signup";
-  } else {
-    authMode = "login";
-    clearResetTokenFromUrl();
-  }
+  authMode = "login";
+  clearResetTokenFromUrl();
   clearAuthMessage();
   syncAuthMode();
 }
@@ -576,6 +581,10 @@ async function handleAuthSubmit(event) {
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
     const confirmPassword = String(formData.get("confirmPassword") || "");
+
+    if (authMode === "signup") {
+      throw new Error("Account creation is disabled.");
+    }
 
     if ((authMode === "signup" || authMode === "reset") && password !== confirmPassword) {
       throw new Error("Passwords do not match.");

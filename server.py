@@ -380,7 +380,7 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         if parsed.path == "/api/auth/signup":
-            self.handle_signup()
+            self.send_error_json(HTTPStatus.FORBIDDEN, "Account creation is disabled.")
             return
         if parsed.path == "/api/auth/login":
             self.handle_login()
