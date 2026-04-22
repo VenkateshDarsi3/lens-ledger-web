@@ -566,11 +566,55 @@ button:disabled {
 }
 
 .overview-detail-list {
-  display: grid;
-  gap: 10px;
-  max-height: 320px;
-  overflow: auto;
   padding-top: 16px;
+}
+
+.overview-table-shell {
+  border: 1px solid rgba(118, 78, 53, 0.1);
+  border-radius: 20px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.overview-table {
+  display: grid;
+  min-width: 760px;
+}
+
+.overview-table-row {
+  display: grid;
+  grid-template-columns: var(--overview-table-columns);
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.overview-table-row:not(:last-child) {
+  border-bottom: 1px solid rgba(118, 78, 53, 0.1);
+}
+
+.overview-table-head {
+  background: rgba(67, 81, 66, 0.09);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  position: sticky;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.overview-table-primary,
+.overview-table-total {
+  font-weight: 800;
+}
+
+.overview-table-total {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.overview-table-row .is-right {
+  text-align: right;
 }
 
 .overview-detail-row {

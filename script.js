@@ -1202,99 +1202,154 @@ function renderOverviewDetails(stats) {
   if (!overviewEnquiryReport) return;
 
   const bookedLeads = state.leads.filter(stats.isBookedLead);
+  const financialColumns = [
+    { label: "Client Name", key: "client", className: "overview-table-primary" },
+    { label: "Date", key: "date" },
+    { label: "Project Total", key: "amount", align: "right" },
+    { label: "Team Payout", key: "team", align: "right" },
+    { label: "Profit", key: "profit", align: "right" }
+  ];
+  const leadFinancialRows = state.leads.map((lead) => buildLeadFinancialRow(lead));
+  const bookedFinancialRows = bookedLeads.map((lead) => buildLeadFinancialRow(lead));
   const revenueRows = [
-    ...bookedLeads.map((lead) => ({
-      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
-      meta: [formatDate(lead.eventDate), lead.source === "wedding-plan" ? "Wedding" : lead.serviceType || "Event"]
-        .filter(Boolean)
-        .join(" | "),
-      amount: formatCurrency(lead.amount)
-    })),
-    ...state.shootShareJobs.map((job) => ({
-      title: job.forPhotographer || "Shoot & Share",
-      meta: [formatDate(job.date), job.location || "No location"].filter(Boolean).join(" | "),
-      amount: formatCurrency(job.totalAmount)
-    }))
+    ...bookedFinancialRows,
+    ...state.shootShareJobs.map((job) => buildShootShareFinancialRow(job))
   ];
 
   const editorRows = stats.unpaidEditorJobs.map((job) => ({
-    title: `${job.projectName || "Editor Project"} - ${job.editorName || "Editor"}`,
-    meta: [formatDate(job.dueDate), job.status || "Pending"].filter(Boolean).join(" | "),
+    project: `${job.projectName || "Editor Project"} - ${job.editorName || "Editor"}`,
+    due: formatDate(job.dueDate),
+    status: job.status || "Pending",
     amount: formatMoney(getEditorPendingAmount(job), job.currency)
   }));
 
   const teamRows = buildTeamDueByMember().flatMap((member) => (
     member.events.map((event) => ({
-      title: `${member.name} - ${event.label}`,
-      meta: "Pending team payout",
+      member: member.name,
+      event: event.label,
+      status: "Pending",
       amount: formatCurrency(event.amount)
     }))
   ));
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewEnquiryReport,
-    state.leads.map((lead) => ({
-      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
-      meta: [formatDate(lead.eventDate), lead.contact || lead.location || "No details"].filter(Boolean).join(" | "),
-      amount: lead.source === "wedding-plan" ? "Wedding" : "Event"
-    })),
+    financialColumns,
+    leadFinancialRows.length
+      ? [...leadFinancialRows, buildLeadFinancialTotalRow("Total Enquiries", state.leads)]
+      : [],
     "No enquiries saved yet."
   );
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewConfirmedReport,
-    bookedLeads.map((lead) => ({
-      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
-      meta: [formatDate(lead.eventDate), lead.location || "No location"].filter(Boolean).join(" | "),
-      amount: formatCurrency(lead.amount)
-    })),
+    financialColumns,
+    bookedFinancialRows.length
+      ? [...bookedFinancialRows, buildLeadFinancialTotalRow("Confirmed Total", bookedLeads)]
+      : [],
     "No confirmed events yet."
   );
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewRevenueReport,
+    financialColumns,
     [
       ...revenueRows,
       {
-        title: "Total Revenue",
-        meta: `Events: ${formatCurrency(stats.leadRevenue)} | Shoot & Share: ${formatCurrency(stats.shootShareRevenue)}`,
+        client: "Total Revenue",
+        date: `Events ${formatCurrency(stats.leadRevenue)} + Shoot & Share ${formatCurrency(stats.shootShareRevenue)}`,
         amount: formatCurrency(stats.revenue),
+        team: formatCurrency(stats.totalTeamCost),
+        profit: formatCurrency(stats.profit),
         total: true
       }
     ],
     "No revenue added yet."
   );
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewEditorDueReport,
+    [
+      { label: "Project / Editor", key: "project", className: "overview-table-primary" },
+      { label: "Due Date", key: "due" },
+      { label: "Status", key: "status" },
+      { label: "Pending Amount", key: "amount", align: "right" }
+    ],
     editorRows,
     "No editor payments pending."
   );
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewTeamDueReport,
+    [
+      { label: "Team Member", key: "member", className: "overview-table-primary" },
+      { label: "Event", key: "event" },
+      { label: "Status", key: "status" },
+      { label: "Amount Owed", key: "amount", align: "right" }
+    ],
     teamRows,
     "No team payouts pending."
   );
 
-  renderOverviewReportList(
+  renderOverviewTable(
     overviewProfitReport,
     [
-      { title: "Revenue", meta: "All booked events and shoot & share jobs", amount: formatCurrency(stats.revenue) },
-      { title: "Team Cost", meta: "All event team payout amounts deducted from profit", amount: formatCurrency(stats.totalTeamCost) },
-      { title: "USD Editor Cost", meta: "Dollar editor payments deducted from profit", amount: formatCurrency(stats.totalUsdEditorCost) },
+      { label: "Item", key: "item", className: "overview-table-primary" },
+      { label: "Meaning", key: "meaning" },
+      { label: "Amount", key: "amount", align: "right" }
+    ],
+    [
+      { item: "Revenue", meaning: "All booked events and shoot & share jobs", amount: formatCurrency(stats.revenue) },
+      { item: "Team Cost", meaning: "All event team payout amounts deducted from profit", amount: formatCurrency(stats.totalTeamCost) },
+      { item: "USD Editor Cost", meaning: "Dollar editor payments deducted from profit", amount: formatCurrency(stats.totalUsdEditorCost) },
       ...(stats.hasNonUsdEditorAmounts ? [{
-        title: "Non-USD Editor Cost",
-        meta: "Tracked separately because it is not converted into dollars",
+        item: "Non-USD Editor Cost",
+        meaning: "Tracked separately because it is not converted into dollars",
         amount: formatMoneyBreakdown(Object.fromEntries(Object.entries(stats.editorCostByCurrency).filter(([currency]) => currency !== "USD")))
       }] : []),
-      { title: "Profit", meta: "Revenue - team cost - USD editor cost", amount: formatCurrency(stats.profit), total: true }
+      { item: "Profit", meaning: "Revenue - team cost - USD editor cost", amount: formatCurrency(stats.profit), total: true }
     ],
     "No profit details yet."
   );
 }
 
-function renderOverviewReportList(container, rows, emptyMessage) {
+function buildLeadFinancialRow(lead) {
+  const amount = Number(lead.amount || 0);
+  const teamCost = getLeadTeamCost(lead);
+  return {
+    client: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
+    date: formatDate(lead.eventDate),
+    amount: formatCurrency(amount),
+    team: formatCurrency(teamCost),
+    profit: formatCurrency(amount - teamCost)
+  };
+}
+
+function buildLeadFinancialTotalRow(label, leads) {
+  const amount = leads.reduce((sum, lead) => sum + Number(lead.amount || 0), 0);
+  const teamCost = leads.reduce((sum, lead) => sum + getLeadTeamCost(lead), 0);
+  return {
+    client: label,
+    date: `${leads.length} records`,
+    amount: formatCurrency(amount),
+    team: formatCurrency(teamCost),
+    profit: formatCurrency(amount - teamCost),
+    total: true
+  };
+}
+
+function buildShootShareFinancialRow(job) {
+  const amount = Number(job.totalAmount || 0);
+  return {
+    client: `${job.forPhotographer || "Shoot & Share"} - Shoot & Share`,
+    date: formatDate(job.date),
+    amount: formatCurrency(amount),
+    team: formatCurrency(0),
+    profit: formatCurrency(amount)
+  };
+}
+
+function renderOverviewTable(container, columns, rows, emptyMessage) {
   if (!container) return;
 
   if (!rows.length) {
@@ -1302,15 +1357,24 @@ function renderOverviewReportList(container, rows, emptyMessage) {
     return;
   }
 
-  container.innerHTML = rows.map((row) => `
-    <div class="overview-detail-row${row.total ? " overview-detail-row-total" : ""}">
-      <div>
-        <strong>${escapeHtml(row.title)}</strong>
-        <span>${escapeHtml(row.meta || "")}</span>
+  container.innerHTML = `
+    <div class="overview-table-shell">
+      <div class="overview-table" style="--overview-table-columns: ${columns.map(() => "minmax(140px, 1fr)").join(" ")}">
+        <div class="overview-table-row overview-table-head">
+          ${columns.map((column) => `<span class="${column.align === "right" ? "is-right" : ""}">${escapeHtml(column.label)}</span>`).join("")}
+        </div>
+        ${rows.map((row) => `
+          <div class="overview-table-row${row.total ? " overview-table-total" : ""}">
+            ${columns.map((column) => `
+              <span class="${[column.className || "", column.align === "right" ? "is-right" : ""].filter(Boolean).join(" ")}">
+                ${escapeHtml(row[column.key] || "")}
+              </span>
+            `).join("")}
+          </div>
+        `).join("")}
       </div>
-      <b>${escapeHtml(row.amount || "")}</b>
     </div>
-  `).join("");
+  `;
 }
 
 function buildScheduleItems() {
