@@ -32,7 +32,14 @@ DEFAULT_SLIDES = [
     {"url": "/assets/feature-color.jpg", "position": "center center"},
     {"url": "/assets/wall-paper.jpg", "position": "center 46%"},
 ]
-EMPTY_STATE = {"leads": [], "weddingPlans": [], "shootShareJobs": [], "editorJobs": [], "bankAccounts": []}
+EMPTY_STATE = {
+    "inquiries": [],
+    "leads": [],
+    "weddingPlans": [],
+    "shootShareJobs": [],
+    "editorJobs": [],
+    "bankAccounts": [],
+}
 
 
 def now_utc() -> datetime:
@@ -137,16 +144,13 @@ def get_public_enquiry_owner(connection: sqlite3.Connection) -> sqlite3.Row | No
     ).fetchone()
 
 
-def build_public_enquiry_lead(payload: dict) -> dict:
+def build_public_enquiry(payload: dict) -> dict:
     client_name = clean_text(payload.get("clientName"), 120)
     contact = clean_text(payload.get("contact"), 160)
     event_type = clean_text(payload.get("eventType"), 80) or "Event enquiry"
     custom_event_type = clean_text(payload.get("customEventType"), 80)
     if event_type == "Other" and custom_event_type:
         event_type = custom_event_type
-    if event_type == "Wedding":
-        event_type = "Wedding enquiry"
-
     notes = clean_text(payload.get("notes"), 1200)
     website_note = "Public website enquiry."
     combined_notes = f"{website_note} {notes}".strip()
@@ -170,7 +174,7 @@ def build_public_enquiry_lead(payload: dict) -> dict:
         "teamAssignments": [],
         "status": "Enquiry",
         "notes": combined_notes,
-        "source": "manual",
+        "source": "website",
         "createdFrom": "public-enquiry",
         "createdAt": isoformat(now_utc()),
     }
@@ -466,7 +470,7 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             user_id = cursor.lastrowid
             connection.execute(
                 "INSERT INTO app_states (user_id, state_json, updated_at) VALUES (?, ?, ?)",
-                (user_id, json.dumps({"leads": [], "weddingPlans": [], "shootShareJobs": [], "editorJobs": []}), isoformat(now_utc())),
+                (user_id, json.dumps(empty_state()), isoformat(now_utc())),
             )
             token, expires_at = create_session(connection, user_id)
 
@@ -598,11 +602,11 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             self.send_error_json(HTTPStatus.BAD_REQUEST, str(error))
             return
 
-        lead = build_public_enquiry_lead(payload)
-        if not lead["clientName"]:
+        inquiry = build_public_enquiry(payload)
+        if not inquiry["clientName"]:
             self.send_error_json(HTTPStatus.BAD_REQUEST, "Name is required.")
             return
-        if not lead["contact"]:
+        if not inquiry["contact"]:
             self.send_error_json(HTTPStatus.BAD_REQUEST, "Phone or email is required.")
             return
 
@@ -617,7 +621,8 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
                 (owner["id"],),
             ).fetchone()
             state = json.loads(row["state_json"]) if row else empty_state()
-            state.setdefault("leads", []).append(lead)
+            state.setdefault("inquiries", []).append(inquiry)
+            state.setdefault("leads", [])
             state.setdefault("weddingPlans", [])
             state.setdefault("shootShareJobs", [])
             state.setdefault("editorJobs", [])
@@ -688,7 +693,7 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
                 (user["id"],),
             ).fetchone()
 
-        state_json = row["state_json"] if row else json.dumps({"leads": [], "weddingPlans": [], "shootShareJobs": [], "editorJobs": []})
+        state_json = row["state_json"] if row else json.dumps(empty_state())
         self.send_json({"state": json.loads(state_json)})
 
     def handle_state_put(self) -> None:

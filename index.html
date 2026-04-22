@@ -154,6 +154,7 @@
         </div>
       </div>
       <nav class="tab-bar" aria-label="Tracker sections">
+        <button class="tab-button" type="button" data-tab="inquiries">Inquiry</button>
         <button class="tab-button active" type="button" data-tab="pipeline">Event Details</button>
         <button class="tab-button" type="button" data-tab="weddings">Weddings</button>
         <button class="tab-button" type="button" data-tab="shoot-share">Shoot & Share</button>
@@ -429,6 +430,24 @@
               <div id="leadList" class="lead-list"></div>
             </section>
           </div>
+        </section>
+
+        <section class="tab-panel" id="inquiriesPanel" data-panel="inquiries">
+          <section class="panel board-panel">
+            <div class="panel-heading board-header">
+              <div>
+                <h2>Inquiry</h2>
+                <p>Review enquiries sent from the website before moving them into Events or Weddings.</p>
+              </div>
+            </div>
+
+            <div id="inquiryEmptyState" class="empty-state">
+              <h3>No website inquiries yet</h3>
+              <p>When a customer sends the public enquiry form, it will appear here first.</p>
+            </div>
+
+            <div id="inquiryList" class="lead-list"></div>
+          </section>
         </section>
 
         <section class="tab-panel" id="weddingsPanel" data-panel="weddings">

@@ -122,6 +122,8 @@ const publicEventTypeSelect = document.querySelector("#publicEventTypeSelect");
 const publicCustomEventField = document.querySelector("#publicCustomEventField");
 const publicEnquiryMessage = document.querySelector("#publicEnquiryMessage");
 const publicEnquirySubmit = document.querySelector("#publicEnquirySubmit");
+const inquiryList = document.querySelector("#inquiryList");
+const inquiryEmptyState = document.querySelector("#inquiryEmptyState");
 const appShell = document.querySelector("#appShell");
 const authShell = document.querySelector("#authShell");
 const authForm = document.querySelector("#authForm");
@@ -151,6 +153,7 @@ let pendingSavePromise = Promise.resolve();
 let inactivityTimerId = null;
 
 const initialState = {
+  inquiries: [],
   leads: [],
   weddingPlans: [],
   shootShareJobs: [],
@@ -264,6 +267,7 @@ initializeApp();
 
 function createEmptyState() {
   return {
+    inquiries: [],
     leads: [],
     weddingPlans: [],
     shootShareJobs: [],
@@ -274,8 +278,17 @@ function createEmptyState() {
 
 function normalizeAppState(rawState) {
   const safeState = rawState || createEmptyState();
+  const migratedInquiries = (safeState.leads || [])
+    .filter((lead) => lead.createdFrom === "public-enquiry")
+    .map(normalizeInquiry);
   return {
-    leads: (safeState.leads || []).map(normalizeLead),
+    inquiries: [
+      ...(safeState.inquiries || []).map(normalizeInquiry),
+      ...migratedInquiries
+    ],
+    leads: (safeState.leads || [])
+      .filter((lead) => lead.createdFrom !== "public-enquiry")
+      .map(normalizeLead),
     weddingPlans: (safeState.weddingPlans || []).map(normalizeWeddingPlan),
     shootShareJobs: (safeState.shootShareJobs || []).map(normalizeShootShareJob),
     editorJobs: (safeState.editorJobs || []).map(normalizeEditorJob),
@@ -394,6 +407,7 @@ function initializeForms() {
 }
 
 function renderAll() {
+  renderInquiries();
   renderLeads();
   renderWeddingPlans();
   renderShootShareJobs();
@@ -769,7 +783,7 @@ function setActiveOverviewReport(reportName = "profit") {
 
 function getRequestedTab() {
   const requested = window.location.hash.replace("#", "");
-  const validTabs = new Set(["overview", "pipeline", "weddings", "shoot-share", "schedule", "calendar", "editor"]);
+  const validTabs = new Set(["overview", "inquiries", "pipeline", "weddings", "shoot-share", "schedule", "calendar", "editor"]);
   return validTabs.has(requested) ? requested : "pipeline";
 }
 
@@ -921,6 +935,54 @@ function handleShootShareSubmit(event) {
   resetShootShareForm();
   renderAll();
   setActiveTab("shoot-share");
+}
+
+function renderInquiries() {
+  if (!inquiryList || !inquiryEmptyState) return;
+  const items = state.inquiries.slice().sort(compareLeadDates);
+  inquiryList.innerHTML = "";
+  inquiryEmptyState.classList.toggle("hidden", items.length > 0);
+
+  items.forEach((inquiry) => {
+    const fragment = leadCardTemplate.content.cloneNode(true);
+    const badge = fragment.querySelector(".badge");
+    const title = fragment.querySelector(".client-title");
+    const meta = fragment.querySelector(".lead-meta");
+    const notes = fragment.querySelector(".lead-notes");
+    const statusSelect = fragment.querySelector(".status-select");
+    const leadActions = fragment.querySelector(".lead-actions");
+    const editButton = fragment.querySelector(".edit-button");
+    const deleteButton = fragment.querySelector(".delete-button");
+
+    badge.textContent = "Website Inquiry";
+    badge.classList.add("status-follow-up");
+    title.textContent = `${inquiry.clientName || "Client"} - ${inquiry.eventType || "Event"}`;
+    meta.innerHTML = [
+      createMetaItem("Contact", escapeHtml(inquiry.contact || "Not added")),
+      createMetaItem("Event", escapeHtml(inquiry.eventType || "Not added")),
+      createMetaItem("Service", escapeHtml(inquiry.serviceType || "Not added")),
+      createMetaItem("Date", joinDateTime(inquiry.eventDate, inquiry.eventTime)),
+      createMetaItem("Location", escapeHtml(inquiry.location || "Not added"))
+    ].join("");
+    notes.textContent = inquiry.notes || "No enquiry notes added.";
+    statusSelect.innerHTML = "<option>New Inquiry</option>";
+    statusSelect.disabled = true;
+    leadActions.classList.remove("hidden");
+    leadActions.innerHTML = `
+      <div class="form-actions inquiry-actions">
+        <button type="button" class="secondary-button" data-role="inquiry-event">Fill Event Form</button>
+        <button type="button" class="secondary-button" data-role="inquiry-wedding">Fill Wedding Form</button>
+      </div>
+    `;
+
+    editButton.textContent = "Event Form";
+    editButton.addEventListener("click", () => populateLeadFormFromInquiry(inquiry));
+    deleteButton.addEventListener("click", () => deleteInquiry(inquiry.id));
+    leadActions.querySelector('[data-role="inquiry-event"]')?.addEventListener("click", () => populateLeadFormFromInquiry(inquiry));
+    leadActions.querySelector('[data-role="inquiry-wedding"]')?.addEventListener("click", () => populateWeddingFormFromInquiry(inquiry));
+
+    inquiryList.appendChild(fragment);
+  });
 }
 
 function renderLeads() {
@@ -1307,7 +1369,7 @@ function renderStats() {
   ), 0);
   const profit = revenue - totalTeamCost;
 
-  totalEnquiries.textContent = state.leads.length;
+  totalEnquiries.textContent = state.inquiries.length + state.leads.length;
   totalConfirmed.textContent = state.leads.filter(isBookedLead).length;
   totalRevenue.textContent = formatCurrency(revenue);
   totalProfit.textContent = formatCurrency(profit);
@@ -1344,6 +1406,7 @@ function renderOverviewDetails(stats) {
     { label: "Team Payout", key: "team", align: "right" },
     { label: "Profit", key: "profit", align: "right" }
   ];
+  const inquiryFinancialRows = state.inquiries.map((inquiry) => buildInquiryFinancialRow(inquiry));
   const leadFinancialRows = state.leads.map((lead) => buildLeadFinancialRow(lead));
   const bookedFinancialRows = bookedLeads.map((lead) => buildLeadFinancialRow(lead));
   const revenueRows = [
@@ -1370,8 +1433,8 @@ function renderOverviewDetails(stats) {
   renderOverviewTable(
     overviewEnquiryReport,
     financialColumns,
-    leadFinancialRows.length
-      ? [...leadFinancialRows, buildLeadFinancialTotalRow("Total Enquiries", state.leads)]
+    inquiryFinancialRows.length || leadFinancialRows.length
+      ? [...inquiryFinancialRows, ...leadFinancialRows, buildLeadFinancialTotalRow("Total Enquiries", state.leads, state.inquiries.length)]
       : [],
     "No enquiries saved yet."
   );
@@ -1459,12 +1522,22 @@ function buildLeadFinancialRow(lead) {
   };
 }
 
-function buildLeadFinancialTotalRow(label, leads) {
+function buildInquiryFinancialRow(inquiry) {
+  return {
+    client: `${inquiry.clientName || "Client"} - ${inquiry.eventType || "Inquiry"}`,
+    date: formatDate(inquiry.eventDate),
+    amount: "Not quoted",
+    team: "$0",
+    profit: "Review first"
+  };
+}
+
+function buildLeadFinancialTotalRow(label, leads, extraCount = 0) {
   const amount = leads.reduce((sum, lead) => sum + Number(lead.amount || 0), 0);
   const teamCost = leads.reduce((sum, lead) => sum + getLeadTeamCost(lead), 0);
   return {
     client: label,
-    date: `${leads.length} records`,
+    date: `${leads.length + extraCount} records`,
     amount: formatCurrency(amount),
     team: formatCurrency(teamCost),
     profit: formatCurrency(amount - teamCost),
@@ -1799,6 +1872,12 @@ function deleteLead(id) {
   renderAll();
 }
 
+function deleteInquiry(id) {
+  state.inquiries = state.inquiries.filter((inquiry) => inquiry.id !== id);
+  saveState();
+  renderAll();
+}
+
 function deleteWeddingPlan(id) {
   state.weddingPlans = state.weddingPlans.filter((plan) => plan.id !== id);
   state.leads = state.leads.filter((lead) => !(lead.source === "wedding-plan" && lead.id === id));
@@ -1816,6 +1895,38 @@ function deleteShootShareJob(id) {
   state.shootShareJobs = state.shootShareJobs.filter((job) => job.id !== id);
   saveState();
   renderAll();
+}
+
+function populateLeadFormFromInquiry(inquiry) {
+  populateLeadForm({
+    ...inquiry,
+    id: crypto.randomUUID(),
+    amount: 0,
+    advanceGiven: 0,
+    pendingAmount: 0,
+    pricePerHour: 0,
+    bookedHours: 0,
+    actualHours: null,
+    deliverables: "",
+    teamAssignments: [],
+    status: "Confirmed",
+    source: "manual",
+    notes: inquiry.notes || ""
+  });
+}
+
+function populateWeddingFormFromInquiry(inquiry) {
+  resetWeddingForm();
+  weddingForm.elements.clientName.value = inquiry.clientName || "";
+  weddingForm.elements.phone.value = inquiry.contact || "";
+  weddingForm.elements.weddingDate.value = inquiry.eventDate || "";
+  weddingForm.elements.location.value = inquiry.location || "";
+  weddingForm.elements.reviewNotes.value = [inquiry.notes, inquiry.serviceType ? `Service requested: ${inquiry.serviceType}` : ""]
+    .filter(Boolean)
+    .join("\n");
+  syncWeddingPaymentFields();
+  syncWeddingAvailability();
+  setActiveTab("weddings");
 }
 
 function populateLeadForm(lead) {
@@ -2334,6 +2445,23 @@ function normalizeLead(lead) {
     status: lead.status || "Confirmed",
     deliverables: lead.deliverables || "",
     teamAssignments: normalizeTeamAssignments(lead)
+  };
+}
+
+function normalizeInquiry(inquiry) {
+  return {
+    id: inquiry.id || crypto.randomUUID(),
+    clientName: inquiry.clientName || "",
+    contact: inquiry.contact || "",
+    eventType: inquiry.eventType || "Event enquiry",
+    serviceType: inquiry.serviceType || "Both",
+    eventDate: inquiry.eventDate || "",
+    eventTime: inquiry.eventTime || "",
+    location: inquiry.location || "",
+    notes: inquiry.notes || "",
+    createdFrom: "public-enquiry",
+    source: inquiry.source || "website",
+    createdAt: inquiry.createdAt || ""
   };
 }
 
