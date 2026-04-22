@@ -160,6 +160,9 @@ const weddingTeamUiState = {
   openPlans: new Set(),
   openEvents: new Set()
 };
+const leadUpdateUiState = {
+  openLeads: new Set()
+};
 
 tabButtons.forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.tab));
@@ -707,6 +710,9 @@ function handleLeadSubmit(event) {
   event.preventDefault();
   const formData = new FormData(leadForm);
   const id = formData.get("leadId") || crypto.randomUUID();
+  const existingLead = state.leads.find((lead) => lead.id === id);
+  const pricePerHour = Number(formData.get("pricePerHour")) || 0;
+  const amount = Number(formData.get("amount")) || 0;
   const entry = {
     id,
     clientName: formData.get("clientName").trim(),
@@ -718,8 +724,10 @@ function handleLeadSubmit(event) {
     eventDate: formData.get("eventDate"),
     eventTime: formData.get("eventTime"),
     location: formData.get("location").trim(),
-    pricePerHour: Number(formData.get("pricePerHour")) || 0,
-    amount: Number(formData.get("amount")) || 0,
+    pricePerHour,
+    amount,
+    bookedHours: existingLead?.bookedHours || (pricePerHour ? amount / pricePerHour : 0),
+    actualHours: existingLead?.actualHours ?? null,
     advanceGiven: Number(formData.get("advanceGiven")) || 0,
     pendingAmount: Number(formData.get("pendingAmount")) || 0,
     deliverables: formData.get("deliverables").trim(),
@@ -876,7 +884,7 @@ function renderLeads() {
     badge.textContent = lead.eventType || "Event";
     badge.classList.add("status-confirmed");
     title.textContent = lead.clientName;
-    notes.textContent = lead.notes || "No notes added yet.";
+    notes.innerHTML = renderLeadCardNotes(lead);
     leadActions.classList.add("hidden");
 
     meta.innerHTML = [
@@ -887,6 +895,9 @@ function renderLeads() {
       createMetaItem("Date", joinDateTime(lead.eventDate, lead.eventTime)),
       createMetaItem("Location", lead.location || "Not added"),
       createMetaItem("Rate / Hour", lead.pricePerHour ? formatCurrency(lead.pricePerHour) : "Not added"),
+      createMetaItem("Booked Hours", formatHours(getLeadBookedHours(lead))),
+      createMetaItem("Actual Hours", lead.actualHours ? formatHours(lead.actualHours) : "Add after event"),
+      createMetaItem("Extra Hours", formatHours(getLeadExtraHours(lead))),
       createMetaItem("Amount", formatCurrency(lead.amount)),
       createMetaItem("Advance", formatCurrency(lead.advanceGiven)),
       createMetaItem("Pending", formatCurrency(lead.pendingAmount)),
@@ -898,6 +909,41 @@ function renderLeads() {
           : formatTeamAssignments(lead.teamAssignments)
       )
     ].join("");
+
+    notes.querySelector('[data-role="lead-update-panel"]')?.addEventListener("toggle", (panelEvent) => {
+      if (panelEvent.target.open) {
+        leadUpdateUiState.openLeads.add(lead.id);
+      } else {
+        leadUpdateUiState.openLeads.delete(lead.id);
+      }
+    });
+    notes.querySelector('[data-role="lead-actual-hours"]')?.addEventListener("change", (hoursEvent) => {
+      updateLeadActualHours(lead.id, parseOptionalNumber(hoursEvent.target.value));
+    });
+    notes.querySelector('[data-role="lead-payment-toggle"]')?.addEventListener("change", (paymentEvent) => {
+      updateLeadPaymentStatus(lead.id, paymentEvent.target.checked);
+    });
+    notes.querySelectorAll('[data-role="lead-team-hours"]').forEach((input) => {
+      input.addEventListener("change", (teamEvent) => {
+        updateLeadTeamAssignment(lead.id, teamEvent.target.dataset.memberId, {
+          hours: parseOptionalNumber(teamEvent.target.value)
+        });
+      });
+    });
+    notes.querySelectorAll('[data-role="lead-team-payment-status"]').forEach((select) => {
+      select.addEventListener("change", (teamEvent) => {
+        updateLeadTeamAssignment(lead.id, teamEvent.target.dataset.memberId, {
+          paymentStatus: teamEvent.target.value
+        });
+      });
+    });
+    notes.querySelectorAll('[data-role="lead-team-data-shared"]').forEach((select) => {
+      select.addEventListener("change", (teamEvent) => {
+        updateLeadTeamAssignment(lead.id, teamEvent.target.dataset.memberId, {
+          dataSharedStatus: teamEvent.target.value
+        });
+      });
+    });
 
     editButton.addEventListener("click", () => populateLeadForm(lead));
     deleteButton.addEventListener("click", () => deleteLead(lead.id));
@@ -1561,6 +1607,65 @@ function updateLeadStatus(id, nextStatus) {
   renderAll();
 }
 
+function updateLeadActualHours(id, actualHours) {
+  state.leads = state.leads.map((lead) => {
+    if (lead.id !== id) return lead;
+    const bookedHours = getLeadBookedHours(lead);
+    const rate = Number(lead.pricePerHour) || 0;
+    const nextActualHours = actualHours === null ? null : Number(actualHours) || 0;
+    const nextAmount = nextActualHours && rate ? nextActualHours * rate : Number(lead.amount) || 0;
+    const pendingAmount = Math.max(nextAmount - Number(lead.advanceGiven || 0), 0);
+
+    return normalizeLead({
+      ...lead,
+      bookedHours,
+      actualHours: nextActualHours,
+      amount: nextAmount,
+      pendingAmount
+    });
+  });
+  saveState();
+  renderAll();
+}
+
+function updateLeadPaymentStatus(id, isFullyPaid) {
+  state.leads = state.leads.map((lead) => {
+    if (lead.id !== id) return lead;
+    return normalizeLead({
+      ...lead,
+      pendingAmount: isFullyPaid ? 0 : Math.max(Number(lead.amount || 0) - Number(lead.advanceGiven || 0), 0)
+    });
+  });
+  saveState();
+  renderAll();
+}
+
+function updateLeadTeamAssignment(leadId, memberId, updates) {
+  state.leads = state.leads.map((lead) => {
+    if (lead.id !== leadId) return lead;
+    return normalizeLead({
+      ...lead,
+      teamAssignments: (lead.teamAssignments || []).map((item) => {
+        if (item.id !== memberId) return item;
+        const next = { ...item, ...updates };
+        const hours = parseOptionalNumber(next.hours);
+        const amount = hours !== null ? hours * (Number(next.rate) || 0) : parseOptionalNumber(next.amount);
+        const paymentStatus = next.paymentStatus || (next.paid ? "Completed" : "Pending");
+        return {
+          ...next,
+          hours,
+          amount,
+          paymentStatus,
+          paid: paymentStatus === "Completed",
+          dataSharedStatus: next.dataSharedStatus || "Not Shared"
+        };
+      })
+    });
+  });
+  saveState();
+  renderAll();
+}
+
 function updateEditorStatus(id, nextStatus) {
   state.editorJobs = state.editorJobs.map((job) => (job.id === id ? { ...job, status: nextStatus } : job));
   saveState();
@@ -2144,10 +2249,16 @@ function getWeddingExclusionIds(weddingId) {
 function normalizeLead(lead) {
   const amount = Number(lead.amount) || 0;
   const advanceGiven = Number(lead.advanceGiven) || 0;
+  const pricePerHour = Number(lead.pricePerHour) || 0;
+  const bookedHours = Number.isFinite(Number(lead.bookedHours)) && Number(lead.bookedHours) > 0
+    ? Number(lead.bookedHours)
+    : pricePerHour ? amount / pricePerHour : 0;
   return {
     ...lead,
     serviceType: lead.serviceType || "Photography",
-    pricePerHour: Number(lead.pricePerHour) || 0,
+    pricePerHour,
+    bookedHours,
+    actualHours: parseOptionalNumber(lead.actualHours),
     amount,
     advanceGiven,
     pendingAmount: Number.isFinite(Number(lead.pendingAmount))
@@ -2485,6 +2596,82 @@ function renderEditorPaymentControls(job) {
   `;
 }
 
+function renderLeadCardNotes(lead) {
+  const notes = `<p>${escapeHtml(lead.notes || "No notes added yet.")}</p>`;
+  const teamRows = lead.source === "manual" ? renderLeadTeamUpdateRows(lead) : "";
+  const bookedHours = getLeadBookedHours(lead);
+  const actualHours = lead.actualHours ?? "";
+  const extraHours = getLeadExtraHours(lead);
+  const panelOpen = leadUpdateUiState.openLeads.has(lead.id);
+  const fullPaymentDone = Number(lead.pendingAmount || 0) <= 0 && Number(lead.amount || 0) > 0;
+
+  return `
+    ${notes}
+    <details class="team-summary-panel" data-role="lead-update-panel" ${panelOpen ? "open" : ""}>
+      <summary class="team-summary-toggle">
+        <span class="team-summary-toggle-title">Event Updates</span>
+        <span class="team-summary-toggle-meta">${formatHours(extraHours)} extra | ${formatCurrency(getLeadTeamDue(lead))} team due</span>
+      </summary>
+      <div class="event-update-panel">
+        <div class="event-update-grid">
+          <label>
+            Actual / Exceeded Hours
+            <input type="number" min="0" step="0.5" data-role="lead-actual-hours" value="${escapeHtml(actualHours)}" placeholder="${bookedHours ? `Booked ${formatHours(bookedHours)}` : "Enter after event"}" />
+          </label>
+          <div class="event-update-total">
+            <span>Updated Event Total</span>
+            <strong>${formatCurrency(lead.amount)}</strong>
+          </div>
+          <label class="editor-payment-done event-payment-done">
+            <input type="checkbox" data-role="lead-payment-toggle"${fullPaymentDone ? " checked" : ""} />
+            <span>Full payment done</span>
+          </label>
+        </div>
+        ${teamRows}
+      </div>
+    </details>
+  `;
+}
+
+function renderLeadTeamUpdateRows(lead) {
+  if (!(lead.teamAssignments || []).length) return "";
+
+  return `
+    <div class="team-summary-event-list event-team-update-list">
+      ${(lead.teamAssignments || []).map((item) => `
+        <div class="team-summary-row">
+          <div class="team-summary-row-head">
+            <strong>${escapeHtml(item.name || "Team Member")}</strong>
+            <span>${formatCurrency(item.rate)}/hr</span>
+          </div>
+          <div class="team-summary-grid">
+            <label>
+              Hours Worked
+              <input type="number" min="0" step="0.5" data-role="lead-team-hours" data-member-id="${item.id}" value="${escapeHtml(item.hours ?? "")}" placeholder="Enter after event" />
+            </label>
+            <label>
+              Amount
+              <input type="text" value="${item.amount === null || item.amount === undefined ? "" : escapeHtml(formatCurrency(item.amount))}" placeholder="Auto after hours" readonly />
+            </label>
+            <label>
+              Payment Status
+              <select data-role="lead-team-payment-status" data-member-id="${item.id}">
+                ${buildOptions(TEAM_PAYMENT_STATUSES, item.paymentStatus || "Pending")}
+              </select>
+            </label>
+            <label>
+              Data Shared
+              <select data-role="lead-team-data-shared" data-member-id="${item.id}">
+                ${buildOptions(TEAM_DATA_SHARED_STATUSES, item.dataSharedStatus || "Not Shared")}
+              </select>
+            </label>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function exportCalendar() {
   const items = buildCalendarItems();
   if (!items.length) return;
@@ -2613,6 +2800,11 @@ function formatMoney(amount, currency = "USD") {
   }).format(Number(amount) || 0);
 }
 
+function formatHours(value) {
+  const hours = Number(value) || 0;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+}
+
 function getCurrencyBuckets(items, amountGetter) {
   return items.reduce((buckets, item) => {
     const amount = Number(amountGetter(item)) || 0;
@@ -2666,6 +2858,19 @@ function getWeddingCurrentAmount(plan) {
 
 function getWeddingTotalReceived(plan) {
   return Number(plan.advanceGiven) || 0;
+}
+
+function getLeadBookedHours(lead) {
+  const savedHours = Number(lead.bookedHours);
+  if (Number.isFinite(savedHours) && savedHours > 0) return savedHours;
+  const rate = Number(lead.pricePerHour) || 0;
+  return rate ? (Number(lead.amount) || 0) / rate : 0;
+}
+
+function getLeadExtraHours(lead) {
+  const actualHours = Number(lead.actualHours) || 0;
+  if (!actualHours) return 0;
+  return Math.max(actualHours - getLeadBookedHours(lead), 0);
 }
 
 function getEditorPendingAmount(job) {

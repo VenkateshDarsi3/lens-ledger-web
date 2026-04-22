@@ -1438,6 +1438,67 @@ textarea {
   font-size: 1rem;
 }
 
+.event-update-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.event-update-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.event-update-grid label,
+.event-update-total {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.event-update-grid label {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.event-update-grid input {
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  font: inherit;
+}
+
+.event-update-total {
+  min-height: 52px;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(244, 238, 232, 0.95);
+}
+
+.event-update-total span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.event-update-total strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.event-payment-done {
+  align-self: end;
+}
+
+.event-team-update-list {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .deliverable-status-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
@@ -1814,6 +1875,7 @@ textarea {
   .team-summary-grid,
   .status-grid,
   .editor-payment-controls,
+  .event-update-grid,
   .deliverable-status-row {
     grid-template-columns: 1fr;
   }
