@@ -1160,7 +1160,6 @@ function renderStats() {
   const shootShareRevenue = state.shootShareJobs.reduce((sum, job) => sum + Number(job.totalAmount || 0), 0);
   const revenue = leadRevenue + shootShareRevenue;
   const editorCostByCurrency = getCurrencyBuckets(state.editorJobs, (job) => Number(job.amountDue || 0));
-  const totalUsdEditorCost = Number(editorCostByCurrency.USD || 0);
   const hasNonUsdEditorAmounts = Object.entries(editorCostByCurrency).some(([currency, amount]) => currency !== "USD" && Number(amount) > 0);
   const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && getEditorPendingAmount(job) > 0);
   const unpaidEditorCostByCurrency = getCurrencyBuckets(unpaidEditorJobs, getEditorPendingAmount);
@@ -1169,7 +1168,7 @@ function renderStats() {
       ? sum + getLeadTeamCost(lead)
       : sum
   ), 0);
-  const profit = revenue - totalUsdEditorCost - totalTeamCost;
+  const profit = revenue - totalTeamCost;
 
   totalEnquiries.textContent = state.leads.length;
   totalConfirmed.textContent = state.leads.filter(isBookedLead).length;
@@ -1187,7 +1186,6 @@ function renderStats() {
     leadRevenue,
     shootShareRevenue,
     revenue,
-    totalUsdEditorCost,
     editorCostByCurrency,
     totalTeamCost,
     profit,
@@ -1301,13 +1299,12 @@ function renderOverviewDetails(stats) {
     [
       { item: "Revenue", meaning: "All booked events and shoot & share jobs", amount: formatCurrency(stats.revenue) },
       { item: "Team Cost", meaning: "All event team payout amounts deducted from profit", amount: formatCurrency(stats.totalTeamCost) },
-      { item: "USD Editor Cost", meaning: "Dollar editor payments deducted from profit", amount: formatCurrency(stats.totalUsdEditorCost) },
       ...(stats.hasNonUsdEditorAmounts ? [{
-        item: "Non-USD Editor Cost",
-        meaning: "Tracked separately because it is not converted into dollars",
+        item: "Editor Cost (INR)",
+        meaning: "Tracked separately in rupees, not deducted from dollar profit",
         amount: formatMoneyBreakdown(Object.fromEntries(Object.entries(stats.editorCostByCurrency).filter(([currency]) => currency !== "USD")))
       }] : []),
-      { item: "Profit", meaning: "Revenue - team cost - USD editor cost", amount: formatCurrency(stats.profit), total: true }
+      { item: "Profit", meaning: "Revenue - team cost", amount: formatCurrency(stats.profit), total: true }
     ],
     "No profit details yet."
   );

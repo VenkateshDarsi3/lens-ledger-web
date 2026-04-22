@@ -582,6 +582,7 @@ button:disabled {
 }
 
 .overview-table-row {
+  align-items: center;
   display: grid;
   grid-template-columns: var(--overview-table-columns);
   gap: 14px;
@@ -598,10 +599,7 @@ button:disabled {
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  position: sticky;
   text-transform: uppercase;
-  top: 0;
-  z-index: 1;
 }
 
 .overview-table-primary,
