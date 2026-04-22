@@ -117,6 +117,11 @@ const overviewMonthCaption = document.querySelector("#overviewMonthCaption");
 const balanceAfterSpend = document.querySelector("#balanceAfterSpend");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
 const publicShell = document.querySelector("#publicShell");
+const publicEnquiryForm = document.querySelector("#publicEnquiryForm");
+const publicEventTypeSelect = document.querySelector("#publicEventTypeSelect");
+const publicCustomEventField = document.querySelector("#publicCustomEventField");
+const publicEnquiryMessage = document.querySelector("#publicEnquiryMessage");
+const publicEnquirySubmit = document.querySelector("#publicEnquirySubmit");
 const appShell = document.querySelector("#appShell");
 const authShell = document.querySelector("#authShell");
 const authForm = document.querySelector("#authForm");
@@ -184,6 +189,8 @@ openAuthButtons.forEach((button) => button.addEventListener("click", () => {
   syncAuthMode();
   showAuthShell();
 }));
+publicEnquiryForm?.addEventListener("submit", handlePublicEnquirySubmit);
+publicEventTypeSelect?.addEventListener("change", syncPublicCustomEventField);
 
 statusFilter?.addEventListener("change", renderLeads);
 hasPreWeddingCheckbox.addEventListener("change", syncPreWeddingField);
@@ -378,6 +385,7 @@ function initializeForms() {
     overviewMonthInput.value = overviewMonthCursor;
   }
   syncCustomEventField();
+  syncPublicCustomEventField();
   syncLeadTeamSection();
   syncLeadPaymentFields();
   syncLeadAvailability();
@@ -670,6 +678,65 @@ async function apiRequest(path, options = {}) {
   }
 
   return payload;
+}
+
+function syncPublicCustomEventField() {
+  if (!publicEventTypeSelect || !publicCustomEventField) return;
+  const isOther = publicEventTypeSelect.value === "Other";
+  publicCustomEventField.classList.toggle("hidden", !isOther);
+  const input = publicCustomEventField.querySelector("input");
+  if (input) {
+    input.required = isOther;
+    if (!isOther) input.value = "";
+  }
+}
+
+function showPublicEnquiryMessage(message, type = "success") {
+  if (!publicEnquiryMessage) return;
+  publicEnquiryMessage.textContent = message;
+  publicEnquiryMessage.classList.remove("hidden", "is-success", "is-error");
+  publicEnquiryMessage.classList.add(type === "error" ? "is-error" : "is-success");
+}
+
+async function handlePublicEnquirySubmit(event) {
+  event.preventDefault();
+  if (!publicEnquiryForm) return;
+
+  const formData = new FormData(publicEnquiryForm);
+  const payload = {
+    clientName: String(formData.get("clientName") || "").trim(),
+    contact: String(formData.get("contact") || "").trim(),
+    eventType: String(formData.get("eventType") || "").trim(),
+    customEventType: String(formData.get("customEventType") || "").trim(),
+    eventDate: String(formData.get("eventDate") || "").trim(),
+    eventTime: String(formData.get("eventTime") || "").trim(),
+    serviceType: String(formData.get("serviceType") || "").trim(),
+    location: String(formData.get("location") || "").trim(),
+    notes: String(formData.get("notes") || "").trim()
+  };
+
+  if (!payload.clientName || !payload.contact) {
+    showPublicEnquiryMessage("Please add your name and phone/email.", "error");
+    return;
+  }
+
+  publicEnquirySubmit.disabled = true;
+  publicEnquirySubmit.textContent = "Sending…";
+
+  try {
+    const response = await apiRequest("/api/public/enquiry", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    publicEnquiryForm.reset();
+    syncPublicCustomEventField();
+    showPublicEnquiryMessage(response.message || "Thank you. Your enquiry has been sent.");
+  } catch (error) {
+    showPublicEnquiryMessage(error.message || "Could not send enquiry. Please try again.", "error");
+  } finally {
+    publicEnquirySubmit.disabled = false;
+    publicEnquirySubmit.textContent = "Send Enquiry";
+  }
 }
 
 function setSyncStatus(message) {

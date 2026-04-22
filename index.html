@@ -8,23 +8,90 @@
   </head>
   <body>
     <div class="public-shell" id="publicShell">
-      <header class="public-topbar">
-      </header>
-
       <main class="public-main">
-        <div class="public-brand-row">
-          <img class="public-hero-logo" src="assets/logo-black.png" alt="Tales by DVS logo" />
-        </div>
-        <section class="brand-hero public-hero">
-          <div class="brand-hero-card public-hero-card">
-            <div class="brand-hero-slides" id="brandHeroSlides" aria-hidden="true"></div>
-            <div class="public-hero-copy">
-              <h1>Timeless stories, told with heart and cinematic artistry.</h1>
+        <section class="public-landing-hero">
+          <div class="public-hero-content">
+            <div class="public-brand-row">
+              <img class="public-hero-logo" src="assets/logo-black.png" alt="Tales by DVS logo" />
+            </div>
+            <p class="public-kicker">Wedding films and photography</p>
+            <h1>Timeless stories, told with heart and cinematic artistry.</h1>
+            <p>Elegant coverage for weddings, family celebrations, baby showers, house warmings, and milestone events.</p>
+            <div class="public-hero-actions">
+              <a class="primary-button public-link-button" href="#enquiry">Send Enquiry</a>
+              <a class="secondary-button public-link-button" href="#work">View Work</a>
             </div>
           </div>
+          <section class="brand-hero public-hero" aria-label="Featured photography">
+            <div class="brand-hero-card public-hero-card">
+              <div class="brand-hero-slides" id="brandHeroSlides" aria-hidden="true"></div>
+            </div>
+          </section>
         </section>
 
-        <section class="public-section">
+        <section class="public-section public-enquiry-section" id="enquiry">
+          <div class="public-section-heading">
+            <p class="public-kicker">Start Here</p>
+            <h2>Tell us about your event</h2>
+            <p>Share the basics and we will get back to you with availability and next steps.</p>
+          </div>
+          <form id="publicEnquiryForm" class="public-enquiry-form">
+            <div id="publicEnquiryMessage" class="public-enquiry-message hidden"></div>
+            <div class="public-enquiry-grid">
+              <label>
+                Name
+                <input type="text" name="clientName" placeholder="Your name" required />
+              </label>
+              <label>
+                Phone / email
+                <input type="text" name="contact" placeholder="Best way to reach you" required />
+              </label>
+              <label>
+                Event type
+                <select name="eventType" id="publicEventTypeSelect" required>
+                  <option value="Wedding">Wedding</option>
+                  <option value="Engagement">Engagement</option>
+                  <option value="Baby Shower">Baby Shower</option>
+                  <option value="Gender Reveal">Gender Reveal</option>
+                  <option value="House Warming">House Warming</option>
+                  <option value="Birthday">Birthday</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label id="publicCustomEventField" class="hidden">
+                What is the event?
+                <input type="text" name="customEventType" placeholder="Enter event name" />
+              </label>
+              <label>
+                Date
+                <input type="date" name="eventDate" />
+              </label>
+              <label>
+                Time
+                <input type="time" name="eventTime" />
+              </label>
+              <label>
+                Service
+                <select name="serviceType">
+                  <option value="Both">Photography + Videography</option>
+                  <option value="Photography">Photography</option>
+                  <option value="Videography">Videography</option>
+                </select>
+              </label>
+              <label>
+                Location
+                <input type="text" name="location" placeholder="City / venue" />
+              </label>
+            </div>
+            <label>
+              Event details
+              <textarea name="notes" rows="4" placeholder="Tell us what you are planning, expected crowd, special moments, or anything important."></textarea>
+            </label>
+            <button type="submit" class="primary-button" id="publicEnquirySubmit">Send Enquiry</button>
+          </form>
+        </section>
+
+        <section class="public-section public-work-section" id="work">
           <div class="public-section-heading">
             <p class="public-kicker">Featured Collections</p>
             <h2>Browse the work first</h2>

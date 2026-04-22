@@ -32,6 +32,7 @@ DEFAULT_SLIDES = [
     {"url": "/assets/feature-color.jpg", "position": "center center"},
     {"url": "/assets/wall-paper.jpg", "position": "center 46%"},
 ]
+EMPTY_STATE = {"leads": [], "weddingPlans": [], "shootShareJobs": [], "editorJobs": [], "bankAccounts": []}
 
 
 def now_utc() -> datetime:
@@ -114,6 +115,65 @@ def read_json_body(handler: "LensLedgerHandler") -> dict:
         return json.loads(raw_body.decode("utf-8"))
     except json.JSONDecodeError as error:
         raise ValueError("Invalid JSON body.") from error
+
+
+def empty_state() -> dict:
+    return json.loads(json.dumps(EMPTY_STATE))
+
+
+def clean_text(value, max_length: int = 240) -> str:
+    return str(value or "").strip()[:max_length]
+
+
+def get_public_enquiry_owner(connection: sqlite3.Connection) -> sqlite3.Row | None:
+    owner_email = os.getenv("PUBLIC_ENQUIRY_EMAIL", "").strip().lower()
+    if owner_email:
+        row = connection.execute("SELECT id, email FROM users WHERE email = ?", (owner_email,)).fetchone()
+        if row is not None:
+            return row
+
+    return connection.execute(
+        "SELECT id, email FROM users ORDER BY created_at ASC, id ASC LIMIT 1"
+    ).fetchone()
+
+
+def build_public_enquiry_lead(payload: dict) -> dict:
+    client_name = clean_text(payload.get("clientName"), 120)
+    contact = clean_text(payload.get("contact"), 160)
+    event_type = clean_text(payload.get("eventType"), 80) or "Event enquiry"
+    custom_event_type = clean_text(payload.get("customEventType"), 80)
+    if event_type == "Other" and custom_event_type:
+        event_type = custom_event_type
+    if event_type == "Wedding":
+        event_type = "Wedding enquiry"
+
+    notes = clean_text(payload.get("notes"), 1200)
+    website_note = "Public website enquiry."
+    combined_notes = f"{website_note} {notes}".strip()
+
+    return {
+        "id": secrets.token_urlsafe(16),
+        "clientName": client_name,
+        "contact": contact,
+        "eventType": event_type,
+        "serviceType": clean_text(payload.get("serviceType"), 40) or "Both",
+        "eventDate": clean_text(payload.get("eventDate"), 20),
+        "eventTime": clean_text(payload.get("eventTime"), 20),
+        "location": clean_text(payload.get("location"), 240),
+        "pricePerHour": 0,
+        "amount": 0,
+        "bookedHours": 0,
+        "actualHours": None,
+        "advanceGiven": 0,
+        "pendingAmount": 0,
+        "deliverables": "",
+        "teamAssignments": [],
+        "status": "Enquiry",
+        "notes": combined_notes,
+        "source": "manual",
+        "createdFrom": "public-enquiry",
+        "createdAt": isoformat(now_utc()),
+    }
 
 
 def password_hash(password: str, salt: bytes | None = None) -> str:
@@ -330,6 +390,9 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/logout":
             self.handle_logout()
             return
+        if parsed.path == "/api/public/enquiry":
+            self.handle_public_enquiry()
+            return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Route not found.")
 
@@ -527,6 +590,54 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             connection.commit()
 
         self.send_json({"message": "Your password has been updated. Please sign in again."}, status=HTTPStatus.OK)
+
+    def handle_public_enquiry(self) -> None:
+        try:
+            payload = read_json_body(self)
+        except ValueError as error:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(error))
+            return
+
+        lead = build_public_enquiry_lead(payload)
+        if not lead["clientName"]:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Name is required.")
+            return
+        if not lead["contact"]:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Phone or email is required.")
+            return
+
+        with db_connection() as connection:
+            owner = get_public_enquiry_owner(connection)
+            if owner is None:
+                self.send_error_json(HTTPStatus.SERVICE_UNAVAILABLE, "Dashboard account is not ready yet.")
+                return
+
+            row = connection.execute(
+                "SELECT state_json FROM app_states WHERE user_id = ?",
+                (owner["id"],),
+            ).fetchone()
+            state = json.loads(row["state_json"]) if row else empty_state()
+            state.setdefault("leads", []).append(lead)
+            state.setdefault("weddingPlans", [])
+            state.setdefault("shootShareJobs", [])
+            state.setdefault("editorJobs", [])
+            state.setdefault("bankAccounts", [])
+            connection.execute(
+                """
+                INSERT INTO app_states (user_id, state_json, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                  state_json = excluded.state_json,
+                  updated_at = excluded.updated_at
+                """,
+                (owner["id"], json.dumps(state), isoformat(now_utc())),
+            )
+            connection.commit()
+
+        self.send_json(
+            {"ok": True, "message": "Thank you. Your enquiry has been sent."},
+            status=HTTPStatus.CREATED,
+        )
 
     def handle_logout(self) -> None:
         cookie_header = self.headers.get("Cookie")
