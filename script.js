@@ -1123,7 +1123,7 @@ function renderEditorJobs() {
     badge.textContent = job.status;
     badge.classList.add(getBadgeClass(job.status));
     title.textContent = job.projectName;
-    notes.innerHTML = renderEditorDeliverableStatuses(job);
+    notes.innerHTML = `${renderEditorPaymentControls(job)}${renderEditorDeliverableStatuses(job)}`;
     statusSelect.innerHTML = buildOptions(EDITOR_STATUSES, job.status);
 
     meta.innerHTML = [
@@ -1141,6 +1141,30 @@ function renderEditorJobs() {
       select.addEventListener("change", (statusEvent) => {
         updateEditorDeliverableStatus(job.id, statusEvent.target.dataset.id, statusEvent.target.value);
       });
+    });
+    notes.querySelector('[data-role="editor-advance-paid"]')?.addEventListener("change", (paymentEvent) => {
+      const advancePaid = Number(paymentEvent.target.value) || 0;
+      const pendingAmount = Math.max(Number(job.amountDue || 0) - advancePaid, 0);
+      updateEditorPayment(job.id, {
+        advancePaid,
+        pendingAmount,
+        status: pendingAmount <= 0 && Number(job.amountDue || 0) > 0 ? "Paid" : job.status
+      });
+    });
+    notes.querySelector('[data-role="editor-pending-amount"]')?.addEventListener("change", (paymentEvent) => {
+      const pendingAmount = Number(paymentEvent.target.value) || 0;
+      updateEditorPayment(job.id, {
+        pendingAmount,
+        status: pendingAmount <= 0 && Number(job.amountDue || 0) > 0 ? "Paid" : job.status === "Paid" ? "Delivered" : job.status
+      });
+    });
+    notes.querySelector('[data-role="editor-full-payment"]')?.addEventListener("change", (paymentEvent) => {
+      const amountDue = Number(job.amountDue || 0);
+      const advancePaid = Number(job.advancePaid || 0);
+      updateEditorPayment(job.id, paymentEvent.target.checked
+        ? { advancePaid: amountDue, pendingAmount: 0, status: "Paid" }
+        : { advancePaid, pendingAmount: Math.max(amountDue - advancePaid, 0), status: job.status === "Paid" ? "Delivered" : job.status }
+      );
     });
 
     statusSelect.addEventListener("change", (statusEvent) => {
@@ -1539,6 +1563,14 @@ function updateLeadStatus(id, nextStatus) {
 
 function updateEditorStatus(id, nextStatus) {
   state.editorJobs = state.editorJobs.map((job) => (job.id === id ? { ...job, status: nextStatus } : job));
+  saveState();
+  renderAll();
+}
+
+function updateEditorPayment(id, updates) {
+  state.editorJobs = state.editorJobs.map((job) => (
+    job.id === id ? normalizeEditorJob({ ...job, ...updates }) : job
+  ));
   saveState();
   renderAll();
 }
@@ -2415,6 +2447,42 @@ function renderEditorDeliverableStatuses(job) {
       </label>
     `;
   }).join("");
+}
+
+function renderEditorPaymentControls(job) {
+  const amountDue = Number(job.amountDue) || 0;
+  const advancePaid = Number(job.advancePaid) || 0;
+  const pendingAmount = getEditorPendingAmount(job);
+  const isFullyPaid = job.status === "Paid";
+
+  return `
+    <section class="editor-payment-panel" aria-label="Editor payment updates">
+      <div class="editor-payment-panel-header">
+        <div>
+          <strong>Payment Updates</strong>
+          <span>${formatMoney(pendingAmount, job.currency)} pending</span>
+        </div>
+        <label class="editor-payment-done">
+          <input type="checkbox" data-role="editor-full-payment"${isFullyPaid ? " checked" : ""} />
+          <span>Full payment done</span>
+        </label>
+      </div>
+      <div class="editor-payment-controls">
+        <label>
+          <span>Advance Paid</span>
+          <input type="number" min="0" step="1" data-role="editor-advance-paid" value="${escapeHtml(advancePaid)}" />
+        </label>
+        <label>
+          <span>Pending Amount</span>
+          <input type="number" min="0" step="1" data-role="editor-pending-amount" value="${escapeHtml(pendingAmount)}" />
+        </label>
+        <div class="editor-payment-total">
+          <span>Total Amount</span>
+          <strong>${formatMoney(amountDue, job.currency)}</strong>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function exportCalendar() {

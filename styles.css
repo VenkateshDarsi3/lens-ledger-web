@@ -1350,6 +1350,94 @@ textarea {
   padding: 12px 14px;
 }
 
+.editor-payment-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.editor-payment-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.editor-payment-panel-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.editor-payment-panel-header strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.editor-payment-panel-header span,
+.editor-payment-controls span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.editor-payment-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(69, 86, 70, 0.1);
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.editor-payment-done input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--sage);
+}
+
+.editor-payment-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.editor-payment-controls label,
+.editor-payment-total {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editor-payment-controls input {
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  font: inherit;
+}
+
+.editor-payment-total {
+  min-height: 52px;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(244, 238, 232, 0.95);
+}
+
+.editor-payment-total strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
 .deliverable-status-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
@@ -1725,6 +1813,7 @@ textarea {
   .team-member-grid,
   .team-summary-grid,
   .status-grid,
+  .editor-payment-controls,
   .deliverable-status-row {
     grid-template-columns: 1fr;
   }
