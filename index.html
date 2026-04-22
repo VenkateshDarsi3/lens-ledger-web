@@ -125,17 +125,43 @@
             </article>
           </section>
 
-          <section class="panel overview-search-panel">
+          <section class="panel overview-report-panel">
             <div class="panel-heading">
-              <h2>Quick Search</h2>
-              <p>Find clients, weddings, editors, teammates, dates, and locations from one place.</p>
+              <h2>Detailed Report</h2>
+              <p>See exactly which clients, events, payments, and payouts are creating the totals above.</p>
             </div>
-            <label>
-              Search everything
-              <input type="search" id="globalSearchInput" placeholder="Client, phone, event, teammate, editor, location..." />
-            </label>
-            <p id="globalSearchEmptyState" class="overview-search-empty">Start typing to search across all records.</p>
-            <div id="globalSearchResults" class="overview-search-results hidden"></div>
+            <div class="overview-report-grid">
+              <article class="overview-detail-card">
+                <h3>Total Enquiries</h3>
+                <p>Every event and wedding booking currently saved.</p>
+                <div id="overviewEnquiryReport" class="overview-detail-list"></div>
+              </article>
+              <article class="overview-detail-card">
+                <h3>Confirmed Events</h3>
+                <p>Events counted as active/booked in the dashboard.</p>
+                <div id="overviewConfirmedReport" class="overview-detail-list"></div>
+              </article>
+              <article class="overview-detail-card">
+                <h3>Individual Revenue</h3>
+                <p>Each event or shoot contributing to total revenue.</p>
+                <div id="overviewRevenueReport" class="overview-detail-list"></div>
+              </article>
+              <article class="overview-detail-card">
+                <h3>Editor Due</h3>
+                <p>Editor pending payments by project.</p>
+                <div id="overviewEditorDueReport" class="overview-detail-list"></div>
+              </article>
+              <article class="overview-detail-card">
+                <h3>Team Due</h3>
+                <p>Team payouts that are still pending.</p>
+                <div id="overviewTeamDueReport" class="overview-detail-list"></div>
+              </article>
+              <article class="overview-detail-card">
+                <h3>Profit Breakdown</h3>
+                <p>Revenue minus editor and team costs.</p>
+                <div id="overviewProfitReport" class="overview-detail-list"></div>
+              </article>
+            </div>
           </section>
 
           <section class="panel overview-money-panel">

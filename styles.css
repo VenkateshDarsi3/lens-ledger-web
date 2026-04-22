@@ -505,8 +505,79 @@ button:disabled {
   margin-top: 18px;
 }
 
+.overview-report-panel {
+  margin-top: 18px;
+}
+
 .overview-search-panel {
   margin-top: 18px;
+}
+
+.overview-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.overview-detail-card {
+  border-radius: 24px;
+  background: rgba(255, 251, 247, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
+  padding: 22px;
+}
+
+.overview-detail-card h3 {
+  margin-bottom: 8px;
+}
+
+.overview-detail-card > p {
+  color: var(--muted);
+}
+
+.overview-detail-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  max-height: 380px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.overview-detail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(118, 78, 53, 0.1);
+}
+
+.overview-detail-row div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.overview-detail-row strong {
+  font-size: 0.98rem;
+}
+
+.overview-detail-row span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.overview-detail-row b {
+  flex: 0 0 auto;
+  color: var(--text);
+}
+
+.overview-detail-row-total {
+  background: rgba(184, 92, 52, 0.1);
+  border-color: rgba(184, 92, 52, 0.18);
 }
 
 .overview-search-empty {
@@ -1547,14 +1618,16 @@ textarea {
   }
 
   .overview-money-grid,
-  .overview-money-heading {
+  .overview-money-heading,
+  .overview-report-grid {
     display: grid;
     grid-template-columns: 1fr;
   }
 
   .overview-team-row,
   .overview-team-event,
-  .overview-team-header {
+  .overview-team-header,
+  .overview-detail-row {
     flex-direction: column;
     align-items: flex-start;
   }

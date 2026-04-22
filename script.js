@@ -105,6 +105,12 @@ const totalBankBalance = document.querySelector("#totalBankBalance");
 const monthlySpendTotal = document.querySelector("#monthlySpendTotal");
 const monthlySpendBreakdown = document.querySelector("#monthlySpendBreakdown");
 const teamDueBreakdown = document.querySelector("#teamDueBreakdown");
+const overviewEnquiryReport = document.querySelector("#overviewEnquiryReport");
+const overviewConfirmedReport = document.querySelector("#overviewConfirmedReport");
+const overviewRevenueReport = document.querySelector("#overviewRevenueReport");
+const overviewEditorDueReport = document.querySelector("#overviewEditorDueReport");
+const overviewTeamDueReport = document.querySelector("#overviewTeamDueReport");
+const overviewProfitReport = document.querySelector("#overviewProfitReport");
 const overviewMonthCaption = document.querySelector("#overviewMonthCaption");
 const balanceAfterSpend = document.querySelector("#balanceAfterSpend");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
@@ -1162,8 +1168,129 @@ function renderStats() {
       : sum
   ), 0));
   totalBankBalance.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0));
+  renderOverviewDetails({
+    isBookedLead,
+    leadRevenue,
+    shootShareRevenue,
+    revenue,
+    totalEditorCost,
+    totalTeamCost,
+    profit,
+    hasNonUsdEditorAmounts,
+    unpaidEditorJobs
+  });
   renderMonthlySpend();
   renderTeamDueBreakdown();
+}
+
+function renderOverviewDetails(stats) {
+  if (!overviewEnquiryReport) return;
+
+  const bookedLeads = state.leads.filter(stats.isBookedLead);
+  const revenueRows = [
+    ...bookedLeads.map((lead) => ({
+      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
+      meta: [formatDate(lead.eventDate), lead.source === "wedding-plan" ? "Wedding" : lead.serviceType || "Event"]
+        .filter(Boolean)
+        .join(" | "),
+      amount: formatCurrency(lead.amount)
+    })),
+    ...state.shootShareJobs.map((job) => ({
+      title: job.forPhotographer || "Shoot & Share",
+      meta: [formatDate(job.date), job.location || "No location"].filter(Boolean).join(" | "),
+      amount: formatCurrency(job.totalAmount)
+    }))
+  ];
+
+  const editorRows = stats.unpaidEditorJobs.map((job) => ({
+    title: `${job.projectName || "Editor Project"} - ${job.editorName || "Editor"}`,
+    meta: [formatDate(job.dueDate), job.status || "Pending"].filter(Boolean).join(" | "),
+    amount: formatMoney(getEditorPendingAmount(job), job.currency)
+  }));
+
+  const teamRows = buildTeamDueByMember().flatMap((member) => (
+    member.events.map((event) => ({
+      title: `${member.name} - ${event.label}`,
+      meta: "Pending team payout",
+      amount: formatCurrency(event.amount)
+    }))
+  ));
+
+  renderOverviewReportList(
+    overviewEnquiryReport,
+    state.leads.map((lead) => ({
+      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
+      meta: [formatDate(lead.eventDate), lead.contact || lead.location || "No details"].filter(Boolean).join(" | "),
+      amount: lead.source === "wedding-plan" ? "Wedding" : "Event"
+    })),
+    "No enquiries saved yet."
+  );
+
+  renderOverviewReportList(
+    overviewConfirmedReport,
+    bookedLeads.map((lead) => ({
+      title: `${lead.clientName || "Client"} - ${lead.eventType || "Event"}`,
+      meta: [formatDate(lead.eventDate), lead.location || "No location"].filter(Boolean).join(" | "),
+      amount: formatCurrency(lead.amount)
+    })),
+    "No confirmed events yet."
+  );
+
+  renderOverviewReportList(
+    overviewRevenueReport,
+    [
+      ...revenueRows,
+      {
+        title: "Total Revenue",
+        meta: `Events: ${formatCurrency(stats.leadRevenue)} | Shoot & Share: ${formatCurrency(stats.shootShareRevenue)}`,
+        amount: formatCurrency(stats.revenue),
+        total: true
+      }
+    ],
+    "No revenue added yet."
+  );
+
+  renderOverviewReportList(
+    overviewEditorDueReport,
+    editorRows,
+    "No editor payments pending."
+  );
+
+  renderOverviewReportList(
+    overviewTeamDueReport,
+    teamRows,
+    "No team payouts pending."
+  );
+
+  renderOverviewReportList(
+    overviewProfitReport,
+    [
+      { title: "Revenue", meta: "All booked events and shoot & share jobs", amount: formatCurrency(stats.revenue) },
+      { title: "Editor Cost", meta: stats.hasNonUsdEditorAmounts ? "Some editor payments are in INR, so profit needs currency review." : "Total editor amounts", amount: stats.hasNonUsdEditorAmounts ? "Mixed currencies" : formatCurrency(stats.totalEditorCost) },
+      { title: "Team Cost", meta: "All event team payout amounts", amount: formatCurrency(stats.totalTeamCost) },
+      { title: "Profit", meta: "Revenue - editor cost - team cost", amount: stats.hasNonUsdEditorAmounts ? "Check currencies" : formatCurrency(stats.profit), total: true }
+    ],
+    "No profit details yet."
+  );
+}
+
+function renderOverviewReportList(container, rows, emptyMessage) {
+  if (!container) return;
+
+  if (!rows.length) {
+    container.innerHTML = `<p class="overview-team-empty">${escapeHtml(emptyMessage)}</p>`;
+    return;
+  }
+
+  container.innerHTML = rows.map((row) => `
+    <div class="overview-detail-row${row.total ? " overview-detail-row-total" : ""}">
+      <div>
+        <strong>${escapeHtml(row.title)}</strong>
+        <span>${escapeHtml(row.meta || "")}</span>
+      </div>
+      <b>${escapeHtml(row.amount || "")}</b>
+    </div>
+  `).join("");
 }
 
 function buildScheduleItems() {
