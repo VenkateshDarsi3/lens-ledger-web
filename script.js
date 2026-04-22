@@ -111,6 +111,8 @@ const overviewRevenueReport = document.querySelector("#overviewRevenueReport");
 const overviewEditorDueReport = document.querySelector("#overviewEditorDueReport");
 const overviewTeamDueReport = document.querySelector("#overviewTeamDueReport");
 const overviewProfitReport = document.querySelector("#overviewProfitReport");
+const overviewReportTabs = document.querySelectorAll(".overview-report-tab");
+const overviewReportPanels = document.querySelectorAll("[data-report-panel]");
 const overviewMonthCaption = document.querySelector("#overviewMonthCaption");
 const balanceAfterSpend = document.querySelector("#balanceAfterSpend");
 const brandHeroSlidesContainer = document.querySelector("#brandHeroSlides");
@@ -199,6 +201,9 @@ addBankAccountButton?.addEventListener("click", () => {
   saveState();
 });
 globalSearchInput?.addEventListener("input", renderGlobalSearch);
+overviewReportTabs.forEach((button) => {
+  button.addEventListener("click", () => setActiveOverviewReport(button.dataset.reportTarget));
+});
 overviewMonthInput?.addEventListener("change", (event) => {
   overviewMonthCursor = event.target.value || formatMonthValue(new Date());
   renderMonthlySpend();
@@ -678,6 +683,18 @@ function setActiveTab(tabName) {
   });
 
   window.location.hash = tabName;
+}
+
+function setActiveOverviewReport(reportName = "profit") {
+  overviewReportTabs.forEach((button) => {
+    const isActive = button.dataset.reportTarget === reportName;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+
+  overviewReportPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.reportPanel !== reportName;
+  });
 }
 
 function getRequestedTab() {

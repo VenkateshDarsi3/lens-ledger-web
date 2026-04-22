@@ -130,61 +130,57 @@
               <h2>Detailed Report</h2>
               <p>See exactly which clients, events, payments, and payouts are creating the totals above.</p>
             </div>
+            <div class="overview-report-tabs" role="tablist" aria-label="Detailed report sections">
+              <button class="overview-report-tab" type="button" data-report-target="enquiries">Enquiries</button>
+              <button class="overview-report-tab" type="button" data-report-target="confirmed">Confirmed</button>
+              <button class="overview-report-tab" type="button" data-report-target="revenue">Revenue</button>
+              <button class="overview-report-tab" type="button" data-report-target="editor">Editor Due</button>
+              <button class="overview-report-tab" type="button" data-report-target="team">Team Due</button>
+              <button class="overview-report-tab active" type="button" data-report-target="profit">Profit</button>
+            </div>
             <div class="overview-report-grid">
-              <details class="overview-detail-card">
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Total Enquiries</h3>
-                    <p>Every event and wedding booking currently saved.</p>
-                  </span>
-                </summary>
+              <section class="overview-detail-card" data-report-panel="enquiries" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Total Enquiries</h3>
+                  <p>Every event and wedding booking currently saved.</p>
+                </div>
                 <div id="overviewEnquiryReport" class="overview-detail-list"></div>
-              </details>
-              <details class="overview-detail-card">
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Confirmed Events</h3>
-                    <p>Events counted as active/booked in the dashboard.</p>
-                  </span>
-                </summary>
+              </section>
+              <section class="overview-detail-card" data-report-panel="confirmed" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Confirmed Events</h3>
+                  <p>Events counted as active/booked in the dashboard.</p>
+                </div>
                 <div id="overviewConfirmedReport" class="overview-detail-list"></div>
-              </details>
-              <details class="overview-detail-card">
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Individual Revenue</h3>
-                    <p>Each event or shoot contributing to total revenue.</p>
-                  </span>
-                </summary>
+              </section>
+              <section class="overview-detail-card" data-report-panel="revenue" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Individual Revenue</h3>
+                  <p>Each event or shoot contributing to total revenue.</p>
+                </div>
                 <div id="overviewRevenueReport" class="overview-detail-list"></div>
-              </details>
-              <details class="overview-detail-card">
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Editor Due</h3>
-                    <p>Editor pending payments by project.</p>
-                  </span>
-                </summary>
+              </section>
+              <section class="overview-detail-card" data-report-panel="editor" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Editor Due</h3>
+                  <p>Editor pending payments by project.</p>
+                </div>
                 <div id="overviewEditorDueReport" class="overview-detail-list"></div>
-              </details>
-              <details class="overview-detail-card">
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Team Due</h3>
-                    <p>Team payouts that are still pending.</p>
-                  </span>
-                </summary>
+              </section>
+              <section class="overview-detail-card" data-report-panel="team" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Team Due</h3>
+                  <p>Team payouts that are still pending.</p>
+                </div>
                 <div id="overviewTeamDueReport" class="overview-detail-list"></div>
-              </details>
-              <details class="overview-detail-card" open>
-                <summary class="overview-detail-summary">
-                  <span>
-                    <h3>Profit Breakdown</h3>
-                    <p>Revenue minus editor and team costs.</p>
-                  </span>
-                </summary>
+              </section>
+              <section class="overview-detail-card" data-report-panel="profit">
+                <div class="overview-detail-heading">
+                  <h3>Profit Breakdown</h3>
+                  <p>Revenue minus editor and team costs.</p>
+                </div>
                 <div id="overviewProfitReport" class="overview-detail-list"></div>
-              </details>
+              </section>
             </div>
           </section>
 
