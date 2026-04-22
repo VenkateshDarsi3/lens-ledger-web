@@ -1142,26 +1142,23 @@ function renderStats() {
   const leadRevenue = state.leads.reduce((sum, lead) => isBookedLead(lead) ? sum + Number(lead.amount || 0) : sum, 0);
   const shootShareRevenue = state.shootShareJobs.reduce((sum, job) => sum + Number(job.totalAmount || 0), 0);
   const revenue = leadRevenue + shootShareRevenue;
-  const totalEditorCost = state.editorJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
-  const hasNonUsdEditorAmounts = state.editorJobs.some((job) => Number(job.amountDue || 0) > 0 && (job.currency || "USD") !== "USD");
+  const editorCostByCurrency = getCurrencyBuckets(state.editorJobs, (job) => Number(job.amountDue || 0));
+  const totalUsdEditorCost = Number(editorCostByCurrency.USD || 0);
+  const hasNonUsdEditorAmounts = Object.entries(editorCostByCurrency).some(([currency, amount]) => currency !== "USD" && Number(amount) > 0);
   const unpaidEditorJobs = state.editorJobs.filter((job) => job.status !== "Paid" && getEditorPendingAmount(job) > 0);
-  const unpaidEditorCurrencies = [...new Set(unpaidEditorJobs.map((job) => job.currency || "USD"))];
+  const unpaidEditorCostByCurrency = getCurrencyBuckets(unpaidEditorJobs, getEditorPendingAmount);
   const totalTeamCost = state.leads.reduce((sum, lead) => (
     isBookedLead(lead)
       ? sum + getLeadTeamCost(lead)
       : sum
   ), 0);
-  const profit = revenue - totalEditorCost - totalTeamCost;
+  const profit = revenue - totalUsdEditorCost - totalTeamCost;
 
   totalEnquiries.textContent = state.leads.length;
   totalConfirmed.textContent = state.leads.filter(isBookedLead).length;
   totalRevenue.textContent = formatCurrency(revenue);
-  totalProfit.textContent = hasNonUsdEditorAmounts ? "Check currencies" : formatCurrency(profit);
-  editorDue.textContent = unpaidEditorCurrencies.length > 1
-    ? "Mixed currencies"
-    : unpaidEditorCurrencies.length === 1
-      ? formatMoney(unpaidEditorJobs.reduce((sum, job) => sum + getEditorPendingAmount(job), 0), unpaidEditorCurrencies[0])
-      : formatCurrency(0);
+  totalProfit.textContent = formatCurrency(profit);
+  editorDue.textContent = formatMoneyBreakdown(unpaidEditorCostByCurrency);
   teamDue.textContent = formatCurrency(state.leads.reduce((sum, lead) => (
     isBookedLead(lead)
       ? sum + getLeadTeamDue(lead)
@@ -1173,7 +1170,8 @@ function renderStats() {
     leadRevenue,
     shootShareRevenue,
     revenue,
-    totalEditorCost,
+    totalUsdEditorCost,
+    editorCostByCurrency,
     totalTeamCost,
     profit,
     hasNonUsdEditorAmounts,
@@ -1266,9 +1264,14 @@ function renderOverviewDetails(stats) {
     overviewProfitReport,
     [
       { title: "Revenue", meta: "All booked events and shoot & share jobs", amount: formatCurrency(stats.revenue) },
-      { title: "Editor Cost", meta: stats.hasNonUsdEditorAmounts ? "Some editor payments are in INR, so profit needs currency review." : "Total editor amounts", amount: stats.hasNonUsdEditorAmounts ? "Mixed currencies" : formatCurrency(stats.totalEditorCost) },
-      { title: "Team Cost", meta: "All event team payout amounts", amount: formatCurrency(stats.totalTeamCost) },
-      { title: "Profit", meta: "Revenue - editor cost - team cost", amount: stats.hasNonUsdEditorAmounts ? "Check currencies" : formatCurrency(stats.profit), total: true }
+      { title: "Team Cost", meta: "All event team payout amounts deducted from profit", amount: formatCurrency(stats.totalTeamCost) },
+      { title: "USD Editor Cost", meta: "Dollar editor payments deducted from profit", amount: formatCurrency(stats.totalUsdEditorCost) },
+      ...(stats.hasNonUsdEditorAmounts ? [{
+        title: "Non-USD Editor Cost",
+        meta: "Tracked separately because it is not converted into dollars",
+        amount: formatMoneyBreakdown(Object.fromEntries(Object.entries(stats.editorCostByCurrency).filter(([currency]) => currency !== "USD")))
+      }] : []),
+      { title: "Profit", meta: "Revenue - team cost - USD editor cost", amount: formatCurrency(stats.profit), total: true }
     ],
     "No profit details yet."
   );
@@ -2464,6 +2467,22 @@ function formatMoney(amount, currency = "USD") {
   }).format(Number(amount) || 0);
 }
 
+function getCurrencyBuckets(items, amountGetter) {
+  return items.reduce((buckets, item) => {
+    const amount = Number(amountGetter(item)) || 0;
+    if (amount <= 0) return buckets;
+    const currency = EDITOR_CURRENCIES.includes(item.currency) ? item.currency : "USD";
+    buckets[currency] = (buckets[currency] || 0) + amount;
+    return buckets;
+  }, {});
+}
+
+function formatMoneyBreakdown(buckets) {
+  const entries = Object.entries(buckets).filter(([, amount]) => Number(amount) > 0);
+  if (!entries.length) return formatCurrency(0);
+  return entries.map(([currency, amount]) => formatMoney(amount, currency)).join(" + ");
+}
+
 function renderWeddingNotes(plan) {
   const notes = escapeHtml(plan.reviewNotes || "No review notes added yet.");
   const liveLink = plan.liveLink ? `<br><br><a href="${plan.liveLink}" target="_blank" rel="noreferrer">Open live link</a>` : "";
@@ -2635,6 +2654,10 @@ function renderMonthlySpend() {
 
   const teamSpend = getMonthlyTeamSpend(selectedMonth);
   const editorSpend = getMonthlyEditorSpend(selectedMonth);
+  const monthlySpendBuckets = {
+    ...editorSpend.buckets,
+    USD: teamSpend + Number(editorSpend.buckets.USD || 0)
+  };
 
   monthlySpendBreakdown.innerHTML = [
     { label: "Team payouts", value: formatCurrency(teamSpend) },
@@ -2643,12 +2666,8 @@ function renderMonthlySpend() {
     `<div class="overview-spend-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`
   )).join("");
 
-  monthlySpendTotal.textContent = editorSpend.mixed
-    ? "Mixed currencies"
-    : formatCurrency(teamSpend + editorSpend.amount);
-  balanceAfterSpend.textContent = editorSpend.mixed
-    ? "Mixed currencies"
-    : formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0) - (teamSpend + editorSpend.amount));
+  monthlySpendTotal.textContent = formatMoneyBreakdown(monthlySpendBuckets);
+  balanceAfterSpend.textContent = formatCurrency(state.bankAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0) - (teamSpend + editorSpend.amount));
 }
 
 function renderTeamDueBreakdown() {
@@ -2749,18 +2768,11 @@ function getMonthlyEditorSpend(monthValue) {
   const paidJobs = state.editorJobs.filter((job) => (
     job.status === "Paid" && isDateInMonth(job.dueDate || job.eventDate || "", monthValue)
   ));
-  const currencies = [...new Set(paidJobs.map((job) => job.currency || "USD"))];
-
-  if (currencies.length > 1) {
-    return { amount: 0, label: "Mixed currencies", mixed: true };
-  }
-
-  const currency = currencies[0] || "USD";
-  const amount = paidJobs.reduce((sum, job) => sum + Number(job.amountDue || 0), 0);
+  const buckets = getCurrencyBuckets(paidJobs, (job) => Number(job.amountDue || 0));
   return {
-    amount: currency === "USD" ? amount : 0,
-    label: paidJobs.length ? formatMoney(amount, currency) : formatCurrency(0),
-    mixed: currency !== "USD" && amount > 0
+    amount: Number(buckets.USD || 0),
+    buckets,
+    label: formatMoneyBreakdown(buckets)
   };
 }
 
