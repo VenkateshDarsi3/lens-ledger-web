@@ -306,10 +306,12 @@ function renderCalendarWeekdays() {
 
 function initializeBrandHeroSlideshow() {
   const fallbackSlides = [
-    "assets/feature-couple.jpg",
-    "assets/hero-wedding.jpg",
-    "assets/feature-color.jpg",
-    "assets/wall-paper.jpg"
+    { url: "assets/feature-couple.jpg", position: "center center" },
+    { url: "assets/hero-wedding.jpg", position: "center 38%" },
+    { url: "assets/feature-color.jpg", position: "center center" },
+    { url: "assets/calendar-ceremony.jpg", position: "center 48%" },
+    { url: "assets/calendar-portrait.jpg", position: "center 38%" },
+    { url: "assets/wall-paper.jpg", position: "center 46%" }
   ];
 
   const startSlideshow = (slides) => {
@@ -343,9 +345,9 @@ function initializeBrandHeroSlideshow() {
   const loadSlides = () => {
     fetch("/api/slides", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("slides unavailable")))
-      .then((payload) => Array.isArray(payload.slides) && payload.slides.length ? payload.slides : fallbackSlides.map((url) => ({ url })))
+      .then((payload) => Array.isArray(payload.slides) && payload.slides.length ? payload.slides : fallbackSlides)
       .then(startSlideshow)
-      .catch(() => startSlideshow(fallbackSlides.map((url) => ({ url }))));
+      .catch(() => startSlideshow(fallbackSlides));
   };
 
   loadSlides();

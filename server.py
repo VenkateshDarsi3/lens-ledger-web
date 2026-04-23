@@ -30,6 +30,8 @@ DEFAULT_SLIDES = [
     {"url": "/assets/feature-couple.jpg", "position": "center center"},
     {"url": "/assets/hero-wedding.jpg", "position": "center 38%"},
     {"url": "/assets/feature-color.jpg", "position": "center center"},
+    {"url": "/assets/calendar-ceremony.jpg", "position": "center 48%"},
+    {"url": "/assets/calendar-portrait.jpg", "position": "center 38%"},
     {"url": "/assets/wall-paper.jpg", "position": "center 46%"},
 ]
 EMPTY_STATE = {
