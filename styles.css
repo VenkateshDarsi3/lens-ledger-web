@@ -431,7 +431,8 @@ button:disabled {
 }
 
 .portfolio-card-wedding {
-  background-image: url("assets/hero-wedding.jpg");
+  background-image: url("assets/feature-color.jpg");
+  background-position: center 46%;
 }
 
 .portfolio-card-couple {
