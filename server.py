@@ -9,13 +9,18 @@ import os
 import secrets
 import smtplib
 import sqlite3
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
+from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -26,6 +31,7 @@ SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SESSION_COOKIE = "lens_ledger_session"
 SESSION_DAYS = 14
 RESET_TOKEN_HOURS = 2
+SMS_REMINDER_WINDOW_DAYS = 7
 DEFAULT_SLIDES = [
     {"url": "/assets/feature-couple.jpg", "position": "center center"},
     {"url": "/assets/hero-wedding.jpg", "position": "center 38%"},
@@ -42,10 +48,77 @@ EMPTY_STATE = {
     "editorJobs": [],
     "bankAccounts": [],
 }
+PUBLIC_PACKAGE_INFO = {
+    "Silver": "Wedding teaser, wedding trailer, and full-length event videos.",
+    "Gold": "Everything in Silver plus a pre-wedding photoshoot.",
+    "Platinum": "Wedding teaser, exclusive event trailers, highlight reels, and a pre-wedding photoshoot.",
+}
+PUBLIC_PORTFOLIO_MATCHES = [
+    {
+        "title": "Weddings",
+        "url": "https://saikrishnagunti.smugmug.com/",
+        "reason": "Best for wedding storytelling, engagement looks, couple portraits, and cinematic outdoor coverage.",
+        "keywords": {"wedding", "engagement", "couple", "outdoor", "cinematic", "portrait", "prewedding", "pre-wedding"},
+    },
+    {
+        "title": "Event Pictures",
+        "url": "https://saikrishnagunti.smugmug.com/DVSUSA",
+        "reason": "Best for baby showers, gender reveals, birthdays, house warmings, and family celebrations.",
+        "keywords": {"baby", "shower", "gender", "reveal", "birthday", "house", "warming", "family", "event"},
+    },
+]
+PUBLIC_FOLLOW_UPS = {
+    "Wedding": [
+        "Which package are you interested in: Silver, Gold, Platinum, or custom?",
+        "How many hours of wedding coverage do you expect?",
+        "Do you also want pre-wedding coverage or only the wedding day?",
+    ],
+    "Engagement": [
+        "Do you want an outdoor shoot, studio look, or both?",
+        "Would you like photography only, videography only, or both?",
+        "How many hours of coverage are you planning for the engagement session?",
+    ],
+    "Baby Shower": [
+        "How many guests are you expecting?",
+        "Do you want photography only or both photo and video coverage?",
+        "How long would you like us to cover the event?",
+    ],
+    "Gender Reveal": [
+        "Is the reveal indoors, outdoors, or at a venue?",
+        "Do you want us to focus only on the reveal or the full event too?",
+        "How many hours of coverage are you expecting?",
+    ],
+    "House Warming": [
+        "Is this a pooja-only ceremony or a full family event as well?",
+        "How many guests are expected?",
+        "Do you want photography only or both photography and videography?",
+    ],
+    "Birthday": [
+        "Is it a kids birthday, adult birthday, or family celebration?",
+        "How many hours of coverage do you need?",
+        "Would you like both candid moments and formal family photos?",
+    ],
+    "Other": [
+        "What kind of event are you planning?",
+        "How many guests are you expecting?",
+        "Do you want photography, videography, or both?",
+    ],
+}
 
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def app_timezone() -> ZoneInfo:
+    try:
+        return ZoneInfo(os.getenv("APP_TIMEZONE", "America/Los_Angeles"))
+    except Exception:
+        return ZoneInfo("UTC")
+
+
+def now_local() -> datetime:
+    return datetime.now(app_timezone())
 
 
 def isoformat(value: datetime) -> str:
@@ -102,6 +175,18 @@ def ensure_database() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS notification_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              notification_key TEXT NOT NULL UNIQUE,
+              notification_type TEXT NOT NULL,
+              sent_at TEXT NOT NULL,
+              FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
         connection.commit()
 
 
@@ -154,8 +239,24 @@ def build_public_enquiry(payload: dict) -> dict:
     if event_type == "Other" and custom_event_type:
         event_type = custom_event_type
     notes = clean_text(payload.get("notes"), 1200)
+    qualification_answers = payload.get("qualificationAnswers") or []
     website_note = "Public website enquiry."
-    combined_notes = f"{website_note} {notes}".strip()
+    qualification_lines = []
+    if isinstance(qualification_answers, list):
+        for item in qualification_answers:
+            if not isinstance(item, dict):
+                continue
+            question = clean_text(item.get("question"), 180)
+            answer = clean_text(item.get("answer"), 240)
+            if question and answer:
+                qualification_lines.append(f"{question}: {answer}")
+
+    note_parts = [website_note]
+    if notes:
+        note_parts.append(notes)
+    if qualification_lines:
+        note_parts.append("AI qualification: " + " | ".join(qualification_lines))
+    combined_notes = " ".join(note_parts).strip()[:2200]
 
     return {
         "id": secrets.token_urlsafe(16),
@@ -182,6 +283,80 @@ def build_public_enquiry(payload: dict) -> dict:
     }
 
 
+def format_display_date(value: str) -> str:
+    parsed = parse_public_date(value)
+    if not parsed:
+        return "Date not set"
+    return datetime.fromisoformat(parsed).strftime("%b %d, %Y")
+
+
+def sms_alert_config() -> dict:
+    return {
+        "account_sid": os.getenv("TWILIO_ACCOUNT_SID", "").strip(),
+        "auth_token": os.getenv("TWILIO_AUTH_TOKEN", "").strip(),
+        "from_number": os.getenv("TWILIO_FROM_NUMBER", "").strip(),
+        "to_number": os.getenv("SMS_ALERT_TO_NUMBER", "").strip(),
+    }
+
+
+def sms_alerts_configured() -> bool:
+    config = sms_alert_config()
+    return all(config.values())
+
+
+def send_sms_message(message: str) -> None:
+    config = sms_alert_config()
+    if not all(config.values()):
+        raise RuntimeError("SMS alerts are not configured yet.")
+
+    credentials = f"{config['account_sid']}:{config['auth_token']}".encode("utf-8")
+    encoded_credentials = base64.b64encode(credentials).decode("ascii")
+    payload = urlencode(
+        {
+            "To": config["to_number"],
+            "From": config["from_number"],
+            "Body": message[:1500],
+        }
+    ).encode("utf-8")
+    request = Request(
+        f"https://api.twilio.com/2010-04-01/Accounts/{quote(config['account_sid'])}/Messages.json",
+        data=payload,
+        method="POST",
+        headers={
+            "Authorization": f"Basic {encoded_credentials}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            if response.status >= 400:
+                raise RuntimeError(f"Twilio returned HTTP {response.status}.")
+    except HTTPError as error:
+        detail = error.read().decode("utf-8", errors="ignore").strip()
+        raise RuntimeError(detail or f"Twilio returned HTTP {error.code}.") from error
+    except URLError as error:
+        raise RuntimeError(f"Could not reach Twilio: {error.reason}") from error
+
+
+def build_public_enquiry_sms(inquiry: dict) -> str:
+    parts = [
+        "Lens Ledger enquiry",
+        clean_text(inquiry.get("clientName"), 60) or "Unknown client",
+        clean_text(inquiry.get("eventType"), 40) or "Event",
+    ]
+    event_date = format_display_date(inquiry.get("eventDate", ""))
+    contact = clean_text(inquiry.get("contact"), 80)
+    location = clean_text(inquiry.get("location"), 80)
+    summary = " | ".join(parts)
+    details = [f"Date: {event_date}"]
+    if contact:
+        details.append(f"Contact: {contact}")
+    if location:
+        details.append(f"Location: {location}")
+    return f"{summary}\n" + "\n".join(details)
+
+
 def password_hash(password: str, salt: bytes | None = None) -> str:
     salt_bytes = salt or secrets.token_bytes(16)
     derived = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, 120_000)
@@ -192,6 +367,294 @@ def verify_password(password: str, stored_hash: str) -> bool:
     salt_b64, derived_b64 = stored_hash.split(":", 1)
     expected = password_hash(password, base64.b64decode(salt_b64))
     return hmac.compare_digest(expected, stored_hash)
+
+
+def infer_public_event_type(message: str = "", event_type: str = "") -> str:
+    normalized_event_type = clean_text(event_type, 80)
+    if normalized_event_type and normalized_event_type != "Other":
+        return normalized_event_type
+
+    lower_message = (message or "").lower()
+    if "wedding" in lower_message:
+        return "Wedding"
+    if "engagement" in lower_message or "proposal" in lower_message or "couple" in lower_message:
+        return "Engagement"
+    if "baby shower" in lower_message:
+        return "Baby Shower"
+    if "gender reveal" in lower_message or "reveal" in lower_message:
+        return "Gender Reveal"
+    if "house warming" in lower_message or "housewarming" in lower_message or "griha pravesh" in lower_message:
+        return "House Warming"
+    if "birthday" in lower_message:
+        return "Birthday"
+    return "Other"
+
+
+def parse_public_date(value: str) -> str | None:
+    value = clean_text(value, 20)
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value).date().isoformat()
+    except ValueError:
+        return None
+
+
+def collect_booked_public_events(state: dict) -> list[dict]:
+    booked_events: list[dict] = []
+
+    for lead in state.get("leads", []):
+        status = clean_text(lead.get("status"), 40)
+        event_date = parse_public_date(lead.get("eventDate", ""))
+        if event_date and status in {"Confirmed", "Completed", "Closed"}:
+            booked_events.append(
+                {
+                    "date": event_date,
+                    "label": clean_text(lead.get("clientName"), 120) or "Booked event",
+                    "type": clean_text(lead.get("eventType"), 80) or "Event",
+                }
+            )
+
+    for plan in state.get("weddingPlans", []):
+        event_date = parse_public_date(plan.get("weddingDate", ""))
+        if event_date:
+            booked_events.append(
+                {
+                    "date": event_date,
+                    "label": clean_text(plan.get("coupleName"), 120) or "Wedding booking",
+                    "type": "Wedding",
+                }
+            )
+
+    for job in state.get("shootShareJobs", []):
+        event_date = parse_public_date(job.get("date", ""))
+        if event_date:
+            booked_events.append(
+                {
+                    "date": event_date,
+                    "label": clean_text(job.get("shootFor"), 120) or "Shoot & Share job",
+                    "type": "Shoot & Share",
+                }
+            )
+
+    return booked_events
+
+
+def collect_upcoming_sms_events(state: dict, window_start, window_end) -> list[dict]:
+    events: list[dict] = []
+    confirmed_statuses = {"Confirmed", "Completed"}
+
+    def maybe_add(event_date_raw: str, label: str, event_type: str, time_label: str = "") -> None:
+        parsed = parse_public_date(event_date_raw)
+        if not parsed:
+            return
+        event_day = datetime.fromisoformat(parsed).date()
+        if not (window_start <= event_day <= window_end):
+            return
+        events.append(
+            {
+                "date": event_day,
+                "dateLabel": event_day.strftime("%b %d"),
+                "label": clean_text(label, 100) or "Upcoming event",
+                "type": clean_text(event_type, 40) or "Event",
+                "time": clean_text(time_label, 40),
+            }
+        )
+
+    for lead in state.get("leads", []):
+        status = clean_text(lead.get("status"), 40)
+        source = clean_text(lead.get("source"), 40)
+        if source != "manual" and status not in confirmed_statuses:
+            continue
+        maybe_add(
+            lead.get("eventDate", ""),
+            clean_text(lead.get("clientName"), 80) or "Booked event",
+            clean_text(lead.get("eventType"), 40) or "Event",
+            clean_text(lead.get("eventTime"), 40),
+        )
+
+    for plan in state.get("weddingPlans", []):
+        client_name = clean_text(plan.get("clientName") or plan.get("coupleName"), 80) or "Wedding"
+        events_list = plan.get("events") or []
+        if events_list:
+            for event in events_list:
+                maybe_add(
+                    event.get("eventDate") or plan.get("weddingDate", ""),
+                    f"{client_name} - {clean_text(event.get('eventName'), 60) or 'Wedding event'}",
+                    "Wedding",
+                    clean_text(event.get("time"), 40),
+                )
+        else:
+            maybe_add(plan.get("weddingDate", ""), client_name, "Wedding", clean_text(plan.get("coverageTime"), 40))
+
+    for job in state.get("shootShareJobs", []):
+        maybe_add(
+            job.get("date", ""),
+            clean_text(job.get("shootFor"), 80) or "Shoot & Share",
+            "Shoot & Share",
+            clean_text(job.get("time"), 40),
+        )
+
+    events.sort(key=lambda item: (item["date"], item["time"], item["label"]))
+    return events
+
+
+def build_weekly_reminder_sms(events: list[dict], window_start, window_end) -> str:
+    lines = [
+        f"Upcoming this week ({window_start.strftime('%b %d')} - {window_end.strftime('%b %d')})",
+    ]
+    for item in events[:6]:
+        suffix = f" | {item['time']}" if item["time"] else ""
+        lines.append(f"{item['dateLabel']}: {item['label']} ({item['type']}){suffix}")
+    remaining = len(events) - 6
+    if remaining > 0:
+        lines.append(f"+{remaining} more upcoming event(s)")
+    return "\n".join(lines)
+
+
+def notification_already_sent(connection: sqlite3.Connection, user_id: int, notification_key: str) -> bool:
+    row = connection.execute(
+        "SELECT 1 FROM notification_logs WHERE user_id = ? AND notification_key = ?",
+        (user_id, notification_key),
+    ).fetchone()
+    return row is not None
+
+
+def record_notification(connection: sqlite3.Connection, user_id: int, notification_key: str, notification_type: str) -> None:
+    connection.execute(
+        """
+        INSERT INTO notification_logs (user_id, notification_key, notification_type, sent_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, notification_key, notification_type, isoformat(now_utc())),
+    )
+
+
+def maybe_send_weekly_sms_reminder() -> None:
+    if not sms_alerts_configured():
+        return
+
+    today_local = now_local().date()
+    window_end = today_local + timedelta(days=SMS_REMINDER_WINDOW_DAYS - 1)
+
+    with db_connection() as connection:
+        owner = get_public_enquiry_owner(connection)
+        if owner is None:
+            return
+
+        notification_key = f"weekly-sms:{today_local.isoformat()}"
+        if notification_already_sent(connection, owner["id"], notification_key):
+            return
+
+        row = connection.execute(
+            "SELECT state_json FROM app_states WHERE user_id = ?",
+            (owner["id"],),
+        ).fetchone()
+        state = json.loads(row["state_json"]) if row else empty_state()
+        events = collect_upcoming_sms_events(state, today_local, window_end)
+        if not events:
+            return
+
+        send_sms_message(build_weekly_reminder_sms(events, today_local, window_end))
+        record_notification(connection, owner["id"], notification_key, "weekly-reminder")
+        connection.commit()
+
+
+def run_sms_reminder_loop() -> None:
+    poll_seconds = max(int(os.getenv("SMS_REMINDER_POLL_SECONDS", "900")), 60)
+    while True:
+        try:
+            maybe_send_weekly_sms_reminder()
+        except Exception as error:
+            print(f"SMS reminder failed: {error}")
+        time.sleep(poll_seconds)
+
+
+def get_public_follow_ups(event_type: str) -> list[str]:
+    return PUBLIC_FOLLOW_UPS.get(event_type, PUBLIC_FOLLOW_UPS["Other"])
+
+
+def get_public_portfolio_matches(message: str, event_type: str) -> list[dict]:
+    haystack = f"{message} {event_type}".lower()
+    scored_matches: list[tuple[int, dict]] = []
+
+    for match in PUBLIC_PORTFOLIO_MATCHES:
+        score = sum(1 for keyword in match["keywords"] if keyword in haystack)
+        if score == 0 and event_type in {"Wedding", "Engagement"} and match["title"] == "Weddings":
+            score = 1
+        if score == 0 and event_type in {"Baby Shower", "Gender Reveal", "House Warming", "Birthday"} and match["title"] == "Event Pictures":
+            score = 1
+        if score > 0:
+            scored_matches.append((score, {"title": match["title"], "url": match["url"], "reason": match["reason"]}))
+
+    if not scored_matches:
+        return [
+            {"title": PUBLIC_PORTFOLIO_MATCHES[0]["title"], "url": PUBLIC_PORTFOLIO_MATCHES[0]["url"], "reason": PUBLIC_PORTFOLIO_MATCHES[0]["reason"]},
+            {"title": PUBLIC_PORTFOLIO_MATCHES[1]["title"], "url": PUBLIC_PORTFOLIO_MATCHES[1]["url"], "reason": PUBLIC_PORTFOLIO_MATCHES[1]["reason"]},
+        ]
+
+    scored_matches.sort(key=lambda item: item[0], reverse=True)
+    return [match for _, match in scored_matches[:2]]
+
+
+def build_public_assistant_reply(payload: dict, state: dict) -> dict:
+    message = clean_text(payload.get("message"), 800)
+    event_type = infer_public_event_type(message, clean_text(payload.get("eventType"), 80))
+    event_date = parse_public_date(payload.get("eventDate", ""))
+    lower_message = message.lower()
+
+    asks_availability = bool(event_date) or any(token in lower_message for token in {"available", "availability", "free", "open date", "open on", "date"})
+    asks_packages = any(token in lower_message for token in {"package", "packages", "silver", "gold", "platinum", "price", "pricing"})
+    asks_events = any(token in lower_message for token in {"baby shower", "engagement", "house warming", "housewarming", "birthday", "gender reveal", "do you do", "do you cover"})
+    asks_portfolio = any(token in lower_message for token in {"portfolio", "style", "outdoor", "engagement style", "cinematic", "gallery", "look", "couple"})
+
+    if not any([asks_availability, asks_packages, asks_events, asks_portfolio]):
+        asks_packages = True
+        asks_events = True
+        asks_portfolio = True
+
+    answer_parts = []
+    availability = None
+
+    if asks_availability:
+        if event_date:
+            conflicts = [item for item in collect_booked_public_events(state) if item["date"] == event_date]
+            if conflicts:
+                labels = ", ".join(f"{item['label']} ({item['type']})" for item in conflicts[:3])
+                availability = {
+                    "status": "Booked",
+                    "label": f"{event_date} looks booked",
+                    "details": labels,
+                }
+                answer_parts.append(f"{event_date} currently looks booked in the calendar. I can still review it manually if timing or location makes a split possible.")
+            else:
+                availability = {
+                    "status": "Likely Available",
+                    "label": f"{event_date} looks open",
+                    "details": "No saved booking is blocking that date right now.",
+                }
+                answer_parts.append(f"{event_date} looks open right now based on the saved schedule. Once you send the enquiry, I can confirm it properly.")
+        else:
+            answer_parts.append("Send the date you are considering and I can check whether it looks open in the calendar.")
+
+    if asks_packages:
+        package_text = "Packages: " + " ".join(f"{name}: {description}" for name, description in PUBLIC_PACKAGE_INFO.items())
+        answer_parts.append(package_text)
+
+    if asks_events:
+        answer_parts.append("Yes, coverage is available for weddings, engagements, baby showers, gender reveals, house warmings, birthdays, and other family celebrations.")
+
+    portfolio_matches = get_public_portfolio_matches(message, event_type)
+    if asks_portfolio:
+        answer_parts.append("I matched a couple of portfolio galleries below based on the style or event type you mentioned.")
+
+    return {
+        "answer": " ".join(answer_parts).strip(),
+        "availability": availability,
+        "portfolioMatches": portfolio_matches,
+        "suggestedQuestions": get_public_follow_ups(event_type),
+        "eventType": event_type,
+    }
 
 
 def create_session(connection: sqlite3.Connection, user_id: int) -> tuple[str, datetime]:
@@ -372,6 +835,9 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/slides":
             self.handle_slides_get()
             return
+        if parsed.path == "/api/public/assistant":
+            self.handle_public_assistant_get(parsed)
+            return
         if parsed.path.startswith("/uploads/slides/"):
             self.handle_slide_file(parsed.path.removeprefix("/uploads/slides/"))
             return
@@ -398,6 +864,9 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/public/enquiry":
             self.handle_public_enquiry()
+            return
+        if parsed.path == "/api/public/assistant":
+            self.handle_public_assistant()
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Route not found.")
@@ -641,10 +1110,48 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
             )
             connection.commit()
 
+        try:
+            if sms_alerts_configured():
+                send_sms_message(build_public_enquiry_sms(inquiry))
+        except Exception as error:
+            print(f"Enquiry SMS failed: {error}")
+
         self.send_json(
             {"ok": True, "message": "Thank you. Your enquiry has been sent."},
             status=HTTPStatus.CREATED,
         )
+
+    def handle_public_assistant_get(self, parsed) -> None:
+        params = parse_qs(parsed.query)
+        payload = {
+            "message": (params.get("message") or [""])[0],
+            "eventType": (params.get("eventType") or [""])[0],
+            "eventDate": (params.get("eventDate") or [""])[0],
+        }
+        self._send_public_assistant_response(payload)
+
+    def handle_public_assistant(self) -> None:
+        try:
+            payload = read_json_body(self)
+        except ValueError as error:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(error))
+            return
+
+        self._send_public_assistant_response(payload)
+
+    def _send_public_assistant_response(self, payload: dict) -> None:
+        with db_connection() as connection:
+            owner = get_public_enquiry_owner(connection)
+            state = empty_state()
+            if owner is not None:
+                row = connection.execute(
+                    "SELECT state_json FROM app_states WHERE user_id = ?",
+                    (owner["id"],),
+                ).fetchone()
+                if row:
+                    state = json.loads(row["state_json"])
+
+        self.send_json(build_public_assistant_reply(payload, state), status=HTTPStatus.OK)
 
     def handle_logout(self) -> None:
         cookie_header = self.headers.get("Cookie")
@@ -763,6 +1270,10 @@ def main() -> None:
     ensure_database()
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
+    if sms_alerts_configured():
+        reminder_thread = threading.Thread(target=run_sms_reminder_loop, daemon=True)
+        reminder_thread.start()
+        print("SMS alerts enabled: enquiry alerts + weekly reminders")
     server = ThreadingHTTPServer((host, port), LensLedgerHandler)
     print(f"Lens Ledger web server running at http://{host}:{port}")
     print(f"Database file: {DB_PATH}")
