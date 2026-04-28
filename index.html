@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lens Ledger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="public-shell" id="publicShell">
+
+      <!-- Custom Cursor -->
+      <div class="cursor" id="cursor"></div>
+      <div class="cursor-dot" id="cursorDot"></div>
+
+      <!-- Scroll Progress Bar -->
+      <div class="scroll-bar" id="scrollBar"></div>
+
+      <!-- Bokeh Particles -->
+      <div class="bokeh-layer" aria-hidden="true">
+        <span class="bokeh b1"></span><span class="bokeh b2"></span>
+        <span class="bokeh b3"></span><span class="bokeh b4"></span>
+        <span class="bokeh b5"></span><span class="bokeh b6"></span>
+        <span class="bokeh b7"></span><span class="bokeh b8"></span>
+      </div>
+
+      <!-- Film Grain -->
+      <div class="film-grain" aria-hidden="true"></div>
+
+      <!-- Sticky Nav -->
+      <nav class="site-nav" id="siteNav">
+        <div class="nav-inner">
+          <img class="nav-logo" src="assets/logo-white.png" alt="Tales by DVS" />
+          <div class="nav-links">
+            <a href="#work" class="nav-link">Portfolio</a>
+            <a href="#services" class="nav-link">Services</a>
+            <a href="#process" class="nav-link">Process</a>
+            <a href="#reviews" class="nav-link">Reviews</a>
+            <a href="#enquiry" class="nav-link">Contact</a>
+          </div>
+          <a href="#enquiry" class="nav-cta">Book Now</a>
+        </div>
+      </nav>
+
+      <main class="public-main">
+
+        <!-- HERO -->
+        <section class="public-landing-hero" id="hero">
+          <div class="public-brand-row">
+            <img class="public-hero-logo" src="assets/logo-black.png" alt="Tales by DVS logo" />
+          </div>
+          <section class="brand-hero public-hero" aria-label="Featured photography">
+            <div class="brand-hero-card public-hero-card hero-tilt" id="heroTilt">
+              <div class="brand-hero-slides" id="brandHeroSlides" aria-hidden="true"></div>
+              <div class="public-hero-content">
+                <p class="public-kicker">Wedding films and photography</p>
+                <h1 class="hero-headline">
+                  <span class="hero-line">Timeless stories,</span>
+                  <em class="hero-line hero-italic">told with heart</em>
+                  <span class="hero-line">and cinematic artistry.</span>
+                </h1>
+                <p class="hero-sub">Elegant coverage for weddings, family celebrations, baby showers, house warmings, and milestone events.</p>
+                <div class="public-hero-actions">
+                  <a class="primary-button public-link-button btn-magnetic" href="#enquiry">Send Enquiry</a>
+                  <a class="ghost-button public-link-button btn-magnetic" href="#work">View Work</a>
+                </div>
+              </div>
+
+              <div class="hero-scroll-hint">
+                <span>Scroll</span>
+                <div class="hero-scroll-line"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <!-- STATS -->
+        <section class="stats-strip reveal-section" id="stats">
+          <div class="stats-inner">
+            <div class="stat-pill">
+              <span class="stat-num" data-target="1000">0</span><span class="stat-plus">+</span>
+              <p>Events Covered</p>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-pill">
+              <span class="stat-num" data-target="1000">0</span><span class="stat-plus">+</span>
+              <p>Weddings</p>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-pill">
+              <span class="stat-num" data-target="5">0</span><span class="stat-plus">★</span>
+              <p>Star Rating</p>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-pill">
+              <span class="stat-num" data-target="10">0</span><span class="stat-plus">+</span>
+              <p>Years Experience</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- PORTFOLIO -->
+        <section class="public-section public-work-section reveal-section" id="work">
+          <div class="public-section-heading">
+            <p class="public-kicker">Featured Collections</p>
+            <h2>Browse the work first</h2>
+            <p>Real moments, real emotion — every frame told with intention.</p>
+          </div>
+          <div class="portfolio-grid">
+            <a class="portfolio-card portfolio-card-wedding card-3d" href="https://saikrishnagunti.smugmug.com/DVSUSA" target="_blank" rel="noreferrer">
+              <div class="card-3d-content">
+                <span class="portfolio-tag">Events</span>
+                <strong>Event Pictures</strong>
+                <p>Babyshowers, Gender Reveal, House warmings &amp; more.</p>
+                <span class="portfolio-arrow">View Gallery ↗</span>
+              </div>
+            </a>
+            <a class="portfolio-card portfolio-card-couple card-3d" href="https://saikrishnagunti.smugmug.com/" target="_blank" rel="noreferrer">
+              <div class="card-3d-content">
+                <span class="portfolio-tag">Weddings</span>
+                <strong>Weddings</strong>
+                <p>Stories with heart. Frames with soul. Moments made cinematic.</p>
+                <span class="portfolio-arrow">View Gallery ↗</span>
+              </div>
+            </a>
+          </div>
+        </section>
+
+        <!-- SERVICES -->
+        <section class="public-section services-section reveal-section" id="services">
+          <div class="public-section-heading">
+            <p class="public-kicker">What We Offer</p>
+            <h2>Choose your coverage</h2>
+            <p>Hover each card to see what's included.</p>
+          </div>
+          <div class="services-grid">
+            <div class="flip-card">
+              <div class="flip-card-inner">
+                <div class="flip-card-front">
+                  <div class="flip-icon">&#128247;</div>
+                  <h3>Photography</h3>
+                  <p>Still frames that hold a lifetime of feeling.</p>
+                  <span class="flip-hint">Hover to explore</span>
+                </div>
+                <div class="flip-card-back">
+                  <h3>Photography</h3>
+                  <ul>
+                    <li>Full-day coverage</li>
+                    <li>Edited high-res gallery</li>
+                    <li>Online delivery</li>
+                    <li>Print-ready files</li>
+                    <li>Candid &amp; posed shots</li>
+                  </ul>
+                  <a href="#enquiry" class="flip-cta">Get a Quote</a>
+                </div>
+              </div>
+            </div>
+            <div class="flip-card flip-card-feature">
+              <div class="flip-card-inner">
+                <div class="flip-card-front">
+                  <div class="flip-badge">Most Popular</div>
+                  <div class="flip-icon">&#127916;</div>
+                  <h3>Photo + Video</h3>
+                  <p>The full story — in stills and in motion.</p>
+                  <span class="flip-hint">Hover to explore</span>
+                </div>
+                <div class="flip-card-back">
+                  <h3>Combined Coverage</h3>
+                  <ul>
+                    <li>Photography + Videography</li>
+                    <li>Wedding teaser &amp; trailer</li>
+                    <li>Full-length film</li>
+                    <li>Highlight reels</li>
+                    <li>Edited photo gallery</li>
+                  </ul>
+                  <a href="#enquiry" class="flip-cta">Get a Quote</a>
+                </div>
+              </div>
+            </div>
+            <div class="flip-card">
+              <div class="flip-card-inner">
+                <div class="flip-card-front">
+                  <div class="flip-icon">&#127909;</div>
+                  <h3>Videography</h3>
+                  <p>Cinematic films that move you every time you watch.</p>
+                  <span class="flip-hint">Hover to explore</span>
+                </div>
+                <div class="flip-card-back">
+                  <h3>Videography</h3>
+                  <ul>
+                    <li>Cinematic teaser</li>
+                    <li>Full wedding trailer</li>
+                    <li>Full-length film</li>
+                    <li>Ceremony coverage</li>
+                    <li>Online delivery</li>
+                  </ul>
+                  <a href="#enquiry" class="flip-cta">Get a Quote</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROCESS -->
+        <section class="process-section reveal-section" id="process">
+          <div class="public-section-heading process-heading">
+            <p class="public-kicker">How It Works</p>
+            <h2>From hello to heirloom</h2>
+          </div>
+          <div class="process-steps">
+            <div class="process-step reveal-section">
+              <div class="step-num">01</div>
+              <div class="step-body">
+                <h3>Send Enquiry</h3>
+                <p>Tell us your date, event type, and vision. We'll respond quickly.</p>
+              </div>
+              <div class="step-connector"></div>
+            </div>
+            <div class="process-step reveal-section">
+              <div class="step-num">02</div>
+              <div class="step-body">
+                <h3>Quick Call</h3>
+                <p>A short conversation to align on style, coverage, and must-have moments.</p>
+              </div>
+              <div class="step-connector"></div>
+            </div>
+            <div class="process-step reveal-section">
+              <div class="step-num">03</div>
+              <div class="step-body">
+                <h3>We Show Up</h3>
+                <p>On the day, we blend in — capturing everything authentically.</p>
+              </div>
+              <div class="step-connector"></div>
+            </div>
+            <div class="process-step reveal-section">
+              <div class="step-num">04</div>
+              <div class="step-body">
+                <h3>You Relive It</h3>
+                <p>Receive your beautifully edited gallery and films. Memories forever.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- REVIEWS -->
+        <section class="reviews-section reveal-section" id="reviews">
+          <div class="public-section-heading reviews-heading">
+            <p class="public-kicker">Client Love</p>
+            <h2>What families say</h2>
+            <p>Real words from real people — unedited and from the heart.</p>
+          </div>
+          <div class="reviews-track-wrap">
+            <div class="reviews-track" id="reviewsTrack">
+
+              <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"We are still watching our wedding film on repeat. Every tiny detail, every emotion — captured perfectly. DVS didn't just film our wedding, they told our story."</p>
+                <div class="review-author">
+                  <div class="review-avatar">S</div>
+                  <div>
+                    <strong>Sravani &amp; Karthik</strong>
+                    <span>Wedding · Dallas, TX</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"The baby shower photos were absolutely stunning. Everyone was asking who the photographer was. Highly recommend DVS for any milestone event!"</p>
+                <div class="review-author">
+                  <div class="review-avatar">P</div>
+                  <div>
+                    <strong>Priya M.</strong>
+                    <span>Baby Shower · Houston, TX</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"Professional, creative, and so easy to work with. The highlight reel made my mom cry happy tears. Worth every penny and more."</p>
+                <div class="review-author">
+                  <div class="review-avatar">R</div>
+                  <div>
+                    <strong>Rohit &amp; Divya</strong>
+                    <span>Wedding · Austin, TX</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"We booked DVS for our gender reveal and the photos were delivered so quickly. The quality blew us away — cinematic, warm, and full of joy."</p>
+                <div class="review-author">
+                  <div class="review-avatar">A</div>
+                  <div>
+                    <strong>Ananya K.</strong>
+                    <span>Gender Reveal · Frisco, TX</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"From the first call to final delivery — seamless. The team was invisible on the day but somehow caught every single moment. Truly exceptional."</p>
+                <div class="review-author">
+                  <div class="review-avatar">V</div>
+                  <div>
+                    <strong>Vijay &amp; Meena</strong>
+                    <span>Wedding · San Antonio, TX</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="reviews-nav">
+            <button class="reviews-prev" id="reviewsPrev" aria-label="Previous">&#8592;</button>
+            <div class="reviews-dots" id="reviewsDots"></div>
+            <button class="reviews-next" id="reviewsNext" aria-label="Next">&#8594;</button>
+          </div>
+          <div class="reviews-write-row">
+            <p class="reviews-write-hint">Had a great experience with us?</p>
+            <button type="button" class="reviews-write-btn btn-magnetic" id="openReviewModal">
+              ✍️ Write a Review
+            </button>
+          </div>
+        </section>
+
+        <!-- REVIEW MODAL -->
+        <div class="review-modal-backdrop hidden" id="reviewModalBackdrop">
+          <div class="review-modal" id="reviewModal">
+            <button class="review-modal-close" id="closeReviewModal" aria-label="Close">&#10005;</button>
+            <div class="review-modal-head">
+              <p class="public-kicker" style="color:var(--clay-deep);">Share Your Story</p>
+              <h2>Leave a Review</h2>
+              <p>Your words mean the world — and help other families trust us with their moments.</p>
+            </div>
+            <div class="star-picker" id="starPicker" role="group" aria-label="Rating">
+              <button type="button" class="star-btn active" data-val="1"><span class="star-icon">★</span><span class="star-num">1</span></button>
+              <button type="button" class="star-btn active" data-val="2"><span class="star-icon">★</span><span class="star-num">2</span></button>
+              <button type="button" class="star-btn active" data-val="3"><span class="star-icon">★</span><span class="star-num">3</span></button>
+              <button type="button" class="star-btn active" data-val="4"><span class="star-icon">★</span><span class="star-num">4</span></button>
+              <button type="button" class="star-btn active" data-val="5"><span class="star-icon">★</span><span class="star-num">5</span></button>
+            </div>
+            <p class="star-label-text" id="starLabelText">5 — Excellent</p>
+            <form id="reviewForm" class="review-form">
+              <input type="hidden" name="rating" id="reviewRating" value="5" />
+              <div class="review-form-grid">
+                <label>
+                  Your name
+                  <input type="text" name="name" placeholder="e.g. Priya &amp; Karthik" required />
+                </label>
+                <label>
+                  Event type
+                  <select name="eventType" id="reviewEventType">
+                    <option value="Wedding">Wedding</option>
+                    <option value="Engagement">Engagement</option>
+                    <option value="Baby Shower">Baby Shower</option>
+                    <option value="Gender Reveal">Gender Reveal</option>
+                    <option value="House Warming">House Warming</option>
+                    <option value="Birthday">Birthday</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div class="review-other-field" id="reviewOtherField">
+                    <input type="text" name="customEventType" id="reviewCustomEventType" placeholder="Please describe your event…" />
+                  </div>
+                </label>
+              </div>
+              <label>
+                Your review
+                <textarea name="reviewText" rows="5" placeholder="Tell us about your experience — what you loved, how it felt, and anything you'd like other families to know." required></textarea>
+              </label>
+              <div id="reviewFormMsg" class="review-form-msg hidden"></div>
+              <button type="submit" class="primary-button" id="reviewSubmitBtn">Submit Review</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ENQUIRY -->
+        <section class="public-section public-enquiry-section reveal-section" id="enquiry">
+          <div class="public-section-heading">
+            <p class="public-kicker">Start Here</p>
+            <h2>Tell us about your event</h2>
+            <p>Share the basics and we will get back to you with availability and next steps.</p>
+          </div>
+          <form id="publicEnquiryForm" class="public-enquiry-form">
+            <div id="publicEnquiryMessage" class="public-enquiry-message hidden"></div>
+            <div class="public-enquiry-grid">
+              <label>
+                Name
+                <input type="text" name="clientName" placeholder="Your name" required />
+              </label>
+              <label>
+                Phone / email
+                <input type="text" name="contact" placeholder="Best way to reach you" required />
+              </label>
+              <label>
+                Event type
+                <select name="eventType" id="publicEventTypeSelect" required>
+                  <option value="Wedding">Wedding</option>
+                  <option value="Engagement">Engagement</option>
+                  <option value="Baby Shower">Baby Shower</option>
+                  <option value="Gender Reveal">Gender Reveal</option>
+                  <option value="House Warming">House Warming</option>
+                  <option value="Birthday">Birthday</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label id="publicCustomEventField" class="hidden">
+                What is the event?
+                <input type="text" name="customEventType" placeholder="Enter event name" />
+              </label>
+              <label>
+                Date
+                <input type="date" name="eventDate" />
+              </label>
+              <label>
+                Time
+                <input type="time" name="eventTime" />
+              </label>
+              <label>
+                Service
+                <select name="serviceType">
+                  <option value="Both">Photography + Videography</option>
+                  <option value="Photography">Photography</option>
+                  <option value="Videography">Videography</option>
+                </select>
+              </label>
+              <label>
+                Location
+                <input type="text" name="location" placeholder="City / venue" />
+              </label>
+            </div>
+            <label>
+              Event details
+              <textarea name="notes" rows="4" placeholder="Tell us what you are planning, expected crowd, special moments, or anything important."></textarea>
+            </label>
+            <button type="submit" class="primary-button" id="publicEnquirySubmit">Send Enquiry</button>
+          </form>
+        </section>
+
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <img class="footer-logo" src="assets/logo-white.png" alt="Tales by DVS" />
+          <div class="footer-links">
+            <a href="#work">Portfolio</a>
+            <a href="#services">Services</a>
+            <a href="#process">Process</a>
+            <a href="#enquiry">Contact</a>
+          </div>
+          <p class="footer-copy">&copy; 2025 Tales by DVS. Crafted with heart.</p>
+        </div>
+        <div class="public-footer-signin">
+          <button type="button" class="public-signin-link open-auth-button">Admin Sign In</button>
+        </div>
+      </footer>
+
+    </div>
+    <div class="auth-shell hidden" id="authShell">
+      <div class="auth-backdrop" id="authBackdrop"></div>
+      <section class="auth-card">
+        <p class="auth-kicker">Lens Ledger Web</p>
+        <h1 id="authTitle">Sign in to your dashboard</h1>
+        <p id="authSubtitle">Access your photography workflow from anywhere once this app is running on the web.</p>
+        <div id="authMessage" class="auth-message hidden"></div>
+        <form id="authForm" class="auth-form">
+          <label id="authEmailField">
+            Email
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+          <label id="authPasswordField">
+            Password
+            <input type="password" name="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <label id="authConfirmField" class="hidden">
+            Confirm Password
+            <input type="password" name="confirmPassword" autocomplete="new-password" minlength="8" />
+          </label>
+          <button type="submit" class="primary-button" id="authSubmitButton">Sign In</button>
+        </form>
+        <div class="auth-card-actions">
+          <div class="auth-card-links">
+            <button type="button" id="authModeToggle" class="auth-toggle hidden">Back to sign in</button>
+          </div>
+          <button type="button" id="authCloseButton" class="auth-close-button">Close</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="page-shell hidden" id="appShell">
+      <div class="app-topbar">
+        <div class="sync-pill" id="syncStatus">Connecting…</div>
+        <div class="account-pill">
+          <span id="accountEmail">Not signed in</span>
+          <button type="button" id="logoutButton" class="secondary-button">Log Out</button>
+        </div>
+      </div>
+      <nav class="tab-bar" aria-label="Tracker sections">
+        <button class="tab-button" type="button" data-tab="inquiries">Inquiry</button>
+        <button class="tab-button active" type="button" data-tab="pipeline">Event Details</button>
+        <button class="tab-button" type="button" data-tab="weddings">Weddings</button>
+        <button class="tab-button" type="button" data-tab="shoot-share">Shoot & Share</button>
+        <button class="tab-button" type="button" data-tab="schedule">Schedule</button>
+        <button class="tab-button" type="button" data-tab="calendar">Calendar</button>
+        <button class="tab-button" type="button" data-tab="editor">Editor</button>
+        <button class="tab-button" type="button" data-tab="overview">Overview</button>
+        <button class="tab-button" type="button" data-tab="reviews">Reviews</button>
+      </nav>
+
+      <main>
+        <section class="tab-panel" id="overviewPanel" data-panel="overview">
+          <section class="hero-stats hero-stats-only">
+            <article class="stat-card">
+              <span id="totalEnquiries">0</span>
+              <p>Total Enquiries</p>
+            </article>
+            <article class="stat-card">
+              <span id="totalConfirmed">0</span>
+              <p>Confirmed Events</p>
+            </article>
+            <article class="stat-card">
+              <span id="totalRevenue">$0</span>
+              <p>Revenue</p>
+            </article>
+            <article class="stat-card">
+              <span id="totalProfit">$0</span>
+              <p>Profit</p>
+            </article>
+            <article class="stat-card">
+              <span id="editorDue">$0</span>
+              <p>Editor Due</p>
+            </article>
+            <article class="stat-card">
+              <span id="teamDue">$0</span>
+              <p>Team Due</p>
+            </article>
+          </section>
+
+          <section class="panel overview-report-panel">
+            <div class="panel-heading">
+              <h2>Detailed Report</h2>
+              <p>See exactly which clients, events, payments, and payouts are creating the totals above.</p>
+            </div>
+            <div class="overview-report-tabs" role="tablist" aria-label="Detailed report sections">
+              <button class="overview-report-tab" type="button" data-report-target="enquiries">Enquiries</button>
+              <button class="overview-report-tab" type="button" data-report-target="confirmed">Confirmed</button>
+              <button class="overview-report-tab" type="button" data-report-target="revenue">Revenue</button>
+              <button class="overview-report-tab" type="button" data-report-target="editor">Editor Due</button>
+              <button class="overview-report-tab" type="button" data-report-target="team">Team Due</button>
+              <button class="overview-report-tab active" type="button" data-report-target="profit">Profit</button>
+            </div>
+            <div class="overview-report-grid">
+              <section class="overview-detail-card" data-report-panel="enquiries" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Total Enquiries</h3>
+                  <p>Every event and wedding booking currently saved.</p>
+                </div>
+                <div id="overviewEnquiryReport" class="overview-detail-list"></div>
+              </section>
+              <section class="overview-detail-card" data-report-panel="confirmed" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Confirmed Events</h3>
+                  <p>Events counted as active/booked in the dashboard.</p>
+                </div>
+                <div id="overviewConfirmedReport" class="overview-detail-list"></div>
+              </section>
+              <section class="overview-detail-card" data-report-panel="revenue" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Individual Revenue</h3>
+                  <p>Each event or shoot contributing to total revenue.</p>
+                </div>
+                <div id="overviewRevenueReport" class="overview-detail-list"></div>
+              </section>
+              <section class="overview-detail-card" data-report-panel="editor" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Editor Due</h3>
+                  <p>Editor pending payments by project.</p>
+                </div>
+                <div id="overviewEditorDueReport" class="overview-detail-list"></div>
+              </section>
+              <section class="overview-detail-card" data-report-panel="team" hidden>
+                <div class="overview-detail-heading">
+                  <h3>Team Due</h3>
+                  <p>Team payouts that are still pending.</p>
+                </div>
+                <div id="overviewTeamDueReport" class="overview-detail-list"></div>
+              </section>
+              <section class="overview-detail-card" data-report-panel="profit">
+                <div class="overview-detail-heading">
+                  <h3>Profit Breakdown</h3>
+                  <p>Revenue minus editor and team costs.</p>
+                </div>
+                <div id="overviewProfitReport" class="overview-detail-list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="panel overview-money-panel">
+            <div class="panel-heading overview-money-heading">
+              <div>
+                <h2>Money Overview</h2>
+                <p>Track your bank balances and see what you are spending each month.</p>
+              </div>
+              <label class="filter-label month-filter-label">
+                Spending Month
+                <input type="month" id="overviewMonthInput" />
+              </label>
+            </div>
+
+            <div class="overview-money-grid">
+              <article class="overview-money-card">
+                <div class="subsection-header">
+                  <div>
+                    <h3>Bank Balances</h3>
+                    <p>Add the current balance in each bank account.</p>
+                  </div>
+                  <button class="secondary-button" id="addBankAccountButton" type="button">Add Bank</button>
+                </div>
+                <div id="bankAccountsList" class="bank-account-list"></div>
+                <div class="overview-money-total">
+                  <span>Total Balance</span>
+                  <strong id="totalBankBalance">$0</strong>
+                </div>
+              </article>
+
+              <article class="overview-money-card">
+                <h3>Monthly Spending</h3>
+                <p id="overviewMonthCaption">Track what has gone out this month.</p>
+                <div class="overview-money-total">
+                  <span>Total Spend</span>
+                  <strong id="monthlySpendTotal">$0</strong>
+                </div>
+                <div class="overview-money-total overview-money-total-secondary">
+                  <span>Left After Spend</span>
+                  <strong id="balanceAfterSpend">$0</strong>
+                </div>
+                <div id="monthlySpendBreakdown" class="overview-spend-breakdown"></div>
+              </article>
+
+              <article class="overview-money-card overview-money-card-wide">
+                <h3>Team Due by Member</h3>
+                <p>See who is owed and which event the amount belongs to.</p>
+                <div id="teamDueBreakdown" class="overview-spend-breakdown"></div>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <!-- ── ADMIN REVIEWS PANEL ── -->
+        <section class="tab-panel" id="reviewsPanel" data-panel="reviews">
+          <div class="layout">
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <h2>Pending Reviews</h2>
+                <p>Approve reviews to make them visible on the public site, or delete them.</p>
+              </div>
+              <div id="adminPendingReviews" class="admin-review-list">
+                <div class="empty-state">
+                  <h3>No pending reviews</h3>
+                  <p>When clients submit reviews they will appear here for your approval.</p>
+                </div>
+              </div>
+            </section>
+            <section class="panel board-panel">
+              <div class="panel-heading">
+                <h2>Approved Reviews</h2>
+                <p>These are live on your public site right now.</p>
+              </div>
+              <div id="adminApprovedReviews" class="admin-review-list">
+                <div class="empty-state">
+                  <h3>No approved reviews yet</h3>
+                  <p>Approve a pending review to publish it.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel active" id="pipelinePanel" data-panel="pipeline">
+          <div class="layout">
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <h2>Add Client</h2>
+                <p>Save a new enquiry, follow-up, or confirmed booking for non-wedding events in dollars.</p>
+              </div>
+
+              <form id="leadForm" class="lead-form">
+                <input type="hidden" name="leadId" />
+                <label>
+                  Client name
+                  <input type="text" name="clientName" required />
+                </label>
+
+                <label>
+                  Phone / email
+                  <input type="text" name="contact" required />
+                </label>
+
+                <label>
+                  Event type
+                  <select name="eventType" id="eventTypeSelect" required>
+                    <option value="Engagement">Engagement</option>
+                    <option value="Birthday">Birthday</option>
+                    <option value="Maternity">Maternity</option>
+                    <option value="Corporate">Corporate</option>
+                    <option value="Portrait">Portrait</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label id="customEventTypeField" class="hidden">
+                  What is the event?
+                  <input type="text" name="customEventType" placeholder="Enter event name" />
+                </label>
+
+                <label>
+                  Services
+                  <select name="serviceType">
+                    <option value="Photography">Photography</option>
+                    <option value="Videography">Videography</option>
+                    <option value="Both">Both</option>
+                  </select>
+                </label>
+
+                <label>
+                  Event date
+                  <input type="date" name="eventDate" />
+                </label>
+
+                <label>
+                  Event time
+                  <input type="time" name="eventTime" />
+                </label>
+
+                <div id="leadAvailabilityAlert" class="availability-alert hidden"></div>
+
+                <label>
+                  Location
+                  <input type="text" name="location" />
+                </label>
+
+                <label>
+                  Price Charged Per Hour
+                  <input type="number" name="pricePerHour" min="0" step="1" placeholder="0" />
+                </label>
+
+                <label>
+                  Total / Package Amount in USD
+                  <input type="number" name="amount" min="0" step="1" placeholder="0" />
+                </label>
+
+                <label>
+                  Advance Given
+                  <input type="number" name="advanceGiven" min="0" step="1" placeholder="0" />
+                </label>
+
+                <label>
+                  Pending Amount
+                  <input type="number" name="pendingAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+
+                <label>
+                  Deliverables
+                  <input type="text" name="deliverables" placeholder="Highlight film, reels, album, raw photos" />
+                </label>
+
+                <div class="subsection" id="leadTeamSection">
+                  <div class="subsection-header">
+                    <div>
+                      <h3>Team Payouts</h3>
+                      <p>Add each teammate with their own amount.</p>
+                    </div>
+                    <button type="button" id="addLeadTeamMember" class="secondary-button">Add Team Member</button>
+                  </div>
+                  <div id="leadTeamList" class="team-list"></div>
+                </div>
+
+                <label>
+                  Notes
+                  <textarea name="notes" rows="4" placeholder="Package asked, references, follow-up plan, or anything important."></textarea>
+                </label>
+
+                <div class="form-actions">
+                  <button type="submit" class="primary-button" id="leadSubmitButton">Save entry</button>
+                  <button type="button" class="secondary-button hidden" id="leadCancelEdit">Cancel Edit</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel board-panel">
+              <div class="panel-heading board-header">
+                <div>
+                  <h2>Event Details</h2>
+                  <p>Track non-wedding events here. Entries are automatically sorted by the nearest event date first.</p>
+                </div>
+              </div>
+
+              <div id="pipelineEmptyState" class="empty-state">
+                <h3>No clients added yet</h3>
+                <p>Add your first enquiry to start building the tracker.</p>
+              </div>
+
+              <div id="leadList" class="lead-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="inquiriesPanel" data-panel="inquiries">
+          <section class="panel board-panel">
+            <div class="panel-heading board-header">
+              <div>
+                <h2>Inquiry</h2>
+                <p>Review enquiries sent from the website before moving them into Events or Weddings.</p>
+              </div>
+            </div>
+
+            <div id="inquiryEmptyState" class="empty-state">
+              <h3>No website inquiries yet</h3>
+              <p>When a customer sends the public enquiry form, it will appear here first.</p>
+            </div>
+
+            <div id="inquiryList" class="lead-list"></div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="weddingsPanel" data-panel="weddings">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Weddings</h2>
+              <p>Plan each wedding with package details, team payouts, livestream link, event coverage, and review notes.</p>
+            </div>
+            <form id="weddingForm" class="lead-form">
+              <input type="hidden" name="weddingId" />
+              <div class="two-column-form">
+                <label>
+                  Couple / Family Name
+                  <input type="text" name="clientName" required />
+                </label>
+                <label>
+                  Phone Number
+                  <input type="text" name="phone" required />
+                </label>
+                <label>
+                  Main Wedding Date
+                  <input type="date" name="weddingDate" required />
+                </label>
+                <label>
+                  Main Location
+                  <input type="text" name="location" required />
+                </label>
+                <label>
+                  Package
+                  <select name="packageType">
+                    <option value="Silver">Silver</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Platinum">Platinum</option>
+                  </select>
+                </label>
+                <label>
+                  Deliverables
+                  <input type="text" name="deliverables" placeholder="Wedding teaser, trailer, complete videos, album" />
+                </label>
+                <label>
+                  Price Charged Per Hour
+                  <input type="number" name="pricePerHour" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Expected Hours
+                  <input type="number" name="expectedHours" min="0" step="0.5" placeholder="0" />
+                </label>
+                <label>
+                  Total Amount
+                  <input type="number" name="totalAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+                <label>
+                  Expected Crowd
+                  <input type="number" name="expectedCrowd" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Live Link
+                  <input type="url" name="liveLink" placeholder="https://..." />
+                </label>
+                <label>
+                  Advance Given
+                  <input type="number" name="advanceGiven" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Pending Amount
+                  <input type="number" name="pendingAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+              </div>
+
+              <div id="weddingAvailabilityAlert" class="availability-alert hidden"></div>
+
+              <div class="subsection">
+                <div class="inline-checkbox-row">
+                  <label class="checkbox-field">
+                    <input type="checkbox" name="hasPreWedding" id="hasPreWedding" />
+                    <span>Pre-wedding included</span>
+                  </label>
+                </div>
+                <div id="preWeddingDateField" class="hidden prewedding-date-wrap">
+                  <label>
+                    Pre-wedding Date
+                    <input type="date" name="preWeddingDate" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="event-builder">
+                <div class="event-builder-header">
+                  <div>
+                    <h3>Wedding Events</h3>
+                    <p>Add only the ceremonies or functions this client actually has, and assign the team for each event separately.</p>
+                  </div>
+                  <button type="button" id="addWeddingEvent" class="secondary-button">Add Event</button>
+                </div>
+                <div id="weddingEventList" class="wedding-event-list"></div>
+              </div>
+
+              <label>
+                Review Notes
+                <textarea name="reviewNotes" rows="4" placeholder="After the event, review coverage quality, actual total hours, and anything to remember."></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="primary-button" id="weddingSubmitButton">Save wedding details</button>
+                <button type="button" class="secondary-button hidden" id="weddingCancelEdit">Cancel Edit</button>
+              </div>
+            </form>
+
+            <div class="saved-section">
+              <div class="panel-heading">
+                <h2>Saved Weddings</h2>
+                <p>Edit an existing wedding plan whenever details change.</p>
+              </div>
+              <div id="weddingPlansEmptyState" class="empty-state">
+                <h3>No wedding plans yet</h3>
+                <p>Saved wedding plans will appear here.</p>
+              </div>
+              <div id="weddingPlansList" class="lead-list"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="schedulePanel" data-panel="schedule">
+          <section class="panel">
+            <div class="panel-heading board-header">
+              <div>
+                <h2>Schedule</h2>
+                <p>Every dated item from your shoots and wedding planner appears here.</p>
+              </div>
+              <button type="button" id="exportCalendarButton" class="secondary-button">Export Calendar (.ics)</button>
+            </div>
+            <div id="scheduleEmptyState" class="empty-state">
+              <h3>No schedule items yet</h3>
+              <p>Add a dated event in the pipeline or wedding planner to build your calendar list.</p>
+            </div>
+            <div id="scheduleList" class="schedule-list"></div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="calendarPanel" data-panel="calendar">
+          <section class="panel calendar-panel">
+            <div class="panel-heading board-header">
+              <div>
+                <h2>Calendar</h2>
+                <p>See blocked dates in a monthly view and hover on them to check your events.</p>
+              </div>
+              <div class="calendar-controls">
+                <button type="button" id="calendarPrevButton" class="secondary-button">Previous</button>
+                <div id="calendarMonthLabel" class="calendar-month-label"></div>
+                <button type="button" id="calendarNextButton" class="secondary-button">Next</button>
+              </div>
+            </div>
+            <div class="calendar-weekdays" id="calendarWeekdays"></div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="shootSharePanel" data-panel="shoot-share">
+          <div class="layout">
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <h2>Shoot & Share</h2>
+                <p>Track jobs where another photographer hires you as part of their team.</p>
+              </div>
+
+              <form id="shootShareForm" class="lead-form">
+                <input type="hidden" name="shootShareId" />
+                <label>
+                  Date
+                  <input type="date" name="date" required />
+                </label>
+                <label>
+                  Time
+                  <input type="time" name="time" />
+                </label>
+                <label>
+                  Per Hour Rate
+                  <input type="number" name="ratePerHour" min="0" step="1" placeholder="0" required />
+                </label>
+                <label>
+                  Total Hours
+                  <input type="number" name="totalHours" min="0" step="0.5" placeholder="0" />
+                </label>
+                <label>
+                  Total Amount
+                  <input type="number" name="totalAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+                <label>
+                  Payment Received
+                  <input type="number" name="paymentReceived" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Pending Payment
+                  <input type="number" name="pendingPayment" min="0" step="1" placeholder="0" readonly />
+                </label>
+                <div id="shootShareAvailabilityAlert" class="availability-alert hidden"></div>
+                <label>
+                  Location
+                  <input type="text" name="location" required />
+                </label>
+                <label>
+                  Shoot & Share For
+                  <input type="text" name="forPhotographer" placeholder="Photographer or studio name" required />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-button" id="shootShareSubmitButton">Save shoot & share</button>
+                  <button type="button" class="secondary-button hidden" id="shootShareCancelEdit">Cancel Edit</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel board-panel">
+              <div class="panel-heading">
+                <h2>Saved Shoot & Share</h2>
+                <p>See who booked you, where the shoot is, and the hourly rate.</p>
+              </div>
+              <div id="shootShareEmptyState" class="empty-state">
+                <h3>No shoot & share jobs yet</h3>
+                <p>Add your first hired-by-photographer booking to track it here.</p>
+              </div>
+              <div id="shootShareList" class="lead-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="editorPanel" data-panel="editor">
+          <div class="layout">
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <h2>Editor Tracker</h2>
+                <p>Track video edit progress, amount due, and which deliverables are still pending.</p>
+              </div>
+              <form id="editorForm" class="lead-form">
+                <input type="hidden" name="editorJobId" />
+                <label>
+                  Client / Project
+                  <input type="text" name="projectName" required />
+                </label>
+                <label>
+                  Editor name
+                  <input type="text" name="editorName" required />
+                </label>
+                <label>
+                  Due date
+                  <input type="date" name="dueDate" />
+                </label>
+                <label>
+                  Status
+                  <select name="status">
+                    <option value="Pending">Pending</option>
+                    <option value="Editing">Editing</option>
+                    <option value="Review">Review</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </label>
+                <label>
+                  Amount to pay
+                  <input type="number" name="amountDue" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Advance Paid
+                  <input type="number" name="advancePaid" min="0" step="1" placeholder="0" />
+                </label>
+                <label>
+                  Pending Amount
+                  <input type="number" name="pendingAmount" min="0" step="1" placeholder="0" readonly />
+                </label>
+                <label>
+                  Payment currency
+                  <select name="editorCurrency">
+                    <option value="USD">USD</option>
+                    <option value="INR">INR</option>
+                  </select>
+                </label>
+
+                <div class="subsection">
+                  <div class="subsection-header">
+                    <div>
+                      <h3>Deliverables</h3>
+                      <p>Choose package-based deliverables, extras, and track the status of each one.</p>
+                    </div>
+                    <button type="button" id="addEditorDeliverable" class="secondary-button">Add Deliverable</button>
+                  </div>
+                  <label>
+                    Package
+                    <select name="editorPackage" id="editorPackage">
+                      <option value="">Select package</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Gold">Gold</option>
+                      <option value="Platinum">Platinum</option>
+                    </select>
+                  </label>
+                  <button type="button" id="loadPackageDeliverables" class="secondary-button">Load Package Deliverables</button>
+                  <div id="editorDeliverableList" class="deliverable-list"></div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="primary-button" id="editorSubmitButton">Add editor task</button>
+                  <button type="button" class="secondary-button hidden" id="editorCancelEdit">Cancel Edit</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel board-panel">
+              <div class="panel-heading">
+                <h2>Editor Progress</h2>
+                <p>See what is still in edit, review, delivered, or pending payment.</p>
+              </div>
+              <div id="editorEmptyState" class="empty-state">
+                <h3>No editor tasks yet</h3>
+                <p>Add your first editing project to start tracking progress and payments.</p>
+              </div>
+              <div id="editorList" class="lead-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="leadCardTemplate">
+      <article class="lead-card">
+        <div class="lead-card-top">
+          <div>
+            <span class="badge"></span>
+            <h3 class="client-title"></h3>
+          </div>
+          <div class="card-actions">
+            <button class="edit-button" type="button">Edit</button>
+            <button class="delete-button" type="button">Delete</button>
+          </div>
+        </div>
+        <div class="lead-meta"></div>
+        <div class="lead-notes"></div>
+        <div class="lead-actions">
+          <label>
+            Update status
+            <select class="status-select"></select>
+          </label>
+        </div>
+      </article>
+    </template>
+
+    <template id="scheduleCardTemplate">
+      <article class="schedule-card">
+        <div class="schedule-top">
+          <div>
+            <span class="badge schedule-badge"></span>
+            <h3 class="schedule-title"></h3>
+          </div>
+          <p class="schedule-date"></p>
+        </div>
+        <div class="schedule-grid"></div>
+        <div class="schedule-notes"></div>
+      </article>
+    </template>
+
+    <template id="weddingEventTemplate">
+      <div class="wedding-event-item">
+        <div class="two-column-form wedding-event-grid">
+          <label>
+            Event Name
+            <input type="text" data-name="eventName" placeholder="Haldi, Sangeeth, Mehendi" required />
+          </label>
+          <label>
+            Event Date
+            <input type="date" data-name="eventDate" required />
+          </label>
+          <label>
+            Time
+            <input type="text" data-name="eventTime" placeholder="11am or 7am - 3pm" />
+          </label>
+          <label>
+            Location
+            <input type="text" data-name="eventLocation" placeholder="Venue or home" />
+          </label>
+          <label>
+            Event Notes
+            <input type="text" data-name="eventNotes" placeholder="Coverage notes, late start, special moments" />
+          </label>
+        </div>
+        <div class="subsection event-team-section">
+          <div class="subsection-header">
+            <div>
+              <h4>Event Team</h4>
+              <p>Add only the teammates covering this event.</p>
+            </div>
+            <button type="button" class="secondary-button add-event-team-button">Add Team Member</button>
+          </div>
+          <div class="team-list event-team-list"></div>
+        </div>
+        <button type="button" class="delete-button remove-event-button">Remove</button>
+      </div>
+    </template>
+
+    <template id="teamMemberTemplate">
+      <div class="team-member-item">
+        <div class="team-member-grid">
+          <label>
+            Team Member
+            <input type="text" data-name="memberName" placeholder="Name" />
+          </label>
+          <label>
+            Per Hour Rate
+            <input type="number" data-name="memberRate" min="0" step="1" placeholder="0" />
+          </label>
+          <label>
+            Payment Status
+            <select data-name="memberPaymentStatus">
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </label>
+          <label>
+            Data Shared
+            <select data-name="memberDataSharedStatus">
+              <option value="Not Shared">Not Shared</option>
+              <option value="Shared">Shared</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" class="delete-button remove-team-button">Remove</button>
+      </div>
+    </template>
+
+    <template id="bankAccountTemplate">
+      <div class="bank-account-item">
+        <div class="team-member-grid">
+          <label>
+            Bank Name
+            <input type="text" data-name="bankName" placeholder="Chase, BofA, HDFC" />
+          </label>
+          <label>
+            Balance
+            <input type="number" data-name="bankBalance" min="0" step="0.01" placeholder="0" />
+          </label>
+        </div>
+        <button type="button" class="delete-button remove-bank-button">Remove</button>
+      </div>
+    </template>
+
+    <template id="editorDeliverableTemplate">
+      <div class="editor-deliverable-item">
+        <div class="editor-deliverable-fields">
+          <label class="editor-deliverable-field">
+            <span>Deliverable</span>
+            <select data-name="deliverableType">
+              <option value="Wedding Teaser">Wedding Teaser</option>
+              <option value="Wedding Trailer">Wedding Trailer</option>
+              <option value="Full-Length Videos">Full-Length Videos</option>
+              <option value="Photos">Photos</option>
+              <option value="Exclusive Individual Event Trailers">Exclusive Individual Event Trailers</option>
+              <option value="Highlight Reels">Highlight Reels</option>
+              <option value="Pre-Wedding Photoshoot">Pre-Wedding Photoshoot</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </label>
+          <label class="editor-deliverable-field custom-deliverable-field hidden">
+            <span>Custom Name</span>
+            <input type="text" data-name="customDeliverable" placeholder="Extra reels, additional cut, album" />
+          </label>
+          <label class="editor-deliverable-field">
+            <span>Status</span>
+            <select data-name="deliverableStatus">
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Review">Review</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" class="delete-button remove-deliverable-button">Remove</button>
+      </div>
+    </template>
+
+    <script src="script.js"></script>
+
+    <!-- ── Interactive 3D Layer ───────────────────────────── -->
+    <script>
+    (function () {
+      'use strict';
+
+      /* ── Scroll progress bar ── */
+      const scrollBar = document.getElementById('scrollBar');
+      function updateScroll() {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollBar) scrollBar.style.width = (window.scrollY / max * 100) + '%';
+      }
+
+      /* ── Nav hide/show on scroll ── */
+      const nav = document.getElementById('siteNav');
+      let lastY = 0;
+      function updateNav() {
+        const y = window.scrollY;
+        if (nav) {
+          nav.classList.toggle('is-scrolled', y > 40);
+        }
+        lastY = y;
+      }
+
+      window.addEventListener('scroll', () => { updateScroll(); updateNav(); }, { passive: true });
+      updateNav();
+
+      /* ── Custom cursor ── */
+      const cursor     = document.getElementById('cursor');
+      const cursorDot  = document.getElementById('cursorDot');
+      let mx = -200, my = -200, cx = -200, cy = -200;
+
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        if (cursorDot) { cursorDot.style.left = mx + 'px'; cursorDot.style.top = my + 'px'; }
+      });
+
+      function animateCursor() {
+        cx += (mx - cx) * 0.12;
+        cy += (my - cy) * 0.12;
+        if (cursor) { cursor.style.left = cx + 'px'; cursor.style.top = cy + 'px'; }
+        requestAnimationFrame(animateCursor);
+      }
+      animateCursor();
+
+      document.querySelectorAll('a, button, .flip-card, .portfolio-card').forEach(el => {
+        el.addEventListener('mouseenter', () => cursor && cursor.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => cursor && cursor.classList.remove('is-hovering'));
+      });
+
+      /* ── Scroll reveal (Intersection Observer) ── */
+      const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry, i) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => entry.target.classList.add('is-visible'), i * 80);
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+      document.querySelectorAll('.reveal-section').forEach(el => revealObserver.observe(el));
+
+      /* ── Animated counters ── */
+      function animateCounter(el) {
+        const target = parseInt(el.dataset.target, 10);
+        const duration = 1600;
+        const start = performance.now();
+        function tick(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.round(eased * target);
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+
+      const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.querySelectorAll('.stat-num').forEach(animateCounter);
+            counterObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.4 });
+
+      const statsStrip = document.querySelector('.stats-strip');
+      if (statsStrip) counterObserver.observe(statsStrip);
+
+      /* ── 3D Hero tilt on mouse move ── */
+      const heroTilt = document.getElementById('heroTilt');
+      if (heroTilt) {
+        const hero = heroTilt.closest('.public-hero') || heroTilt.parentElement;
+        hero.addEventListener('mousemove', e => {
+          const rect = heroTilt.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width  - 0.5;
+          const y = (e.clientY - rect.top)  / rect.height - 0.5;
+          heroTilt.style.transform = `perspective(1200px) rotateY(${x * 6}deg) rotateX(${-y * 4}deg) scale3d(1.01,1.01,1.01)`;
+        });
+        hero.addEventListener('mouseleave', () => {
+          heroTilt.style.transform = 'perspective(1200px) rotateY(0deg) rotateX(0deg) scale3d(1,1,1)';
+        });
+      }
+
+      /* ── 3D portfolio card tilt ── */
+      document.querySelectorAll('.card-3d').forEach(card => {
+        card.addEventListener('mousemove', e => {
+          const rect = card.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width  - 0.5;
+          const y = (e.clientY - rect.top)  / rect.height - 0.5;
+          card.style.transform = `perspective(900px) rotateY(${x * 10}deg) rotateX(${-y * 7}deg) translateY(-8px)`;
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg) translateY(0)';
+        });
+      });
+
+      /* ── Magnetic buttons ── */
+      document.querySelectorAll('.btn-magnetic').forEach(btn => {
+        btn.addEventListener('mousemove', e => {
+          const rect = btn.getBoundingClientRect();
+          const x = (e.clientX - rect.left - rect.width  / 2) * 0.28;
+          const y = (e.clientY - rect.top  - rect.height / 2) * 0.28;
+          btn.style.transform = `translate(${x}px, ${y}px)`;
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.transform = '';
+        });
+      });
+
+      /* ── Reviews carousel ── */
+      (function() {
+        const track  = document.getElementById('reviewsTrack');
+        const dotsEl = document.getElementById('reviewsDots');
+        const prev   = document.getElementById('reviewsPrev');
+        const next   = document.getElementById('reviewsNext');
+        if (!track) return;
+
+        const cards = track.querySelectorAll('.review-card');
+        let current = 0;
+        const total = cards.length;
+
+        // Build dots
+        cards.forEach((_, i) => {
+          const dot = document.createElement('button');
+          dot.className = 'reviews-dot' + (i === 0 ? ' is-active' : '');
+          dot.setAttribute('aria-label', 'Go to review ' + (i + 1));
+          dot.addEventListener('click', () => goTo(i));
+          dotsEl.appendChild(dot);
+        });
+
+        function getCardWidth() {
+          return cards[0].getBoundingClientRect().width + 20; // gap
+        }
+
+        function goTo(idx) {
+          current = (idx + total) % total;
+          track.style.transform = `translateX(-${current * getCardWidth()}px)`;
+          dotsEl.querySelectorAll('.reviews-dot').forEach((d, i) =>
+            d.classList.toggle('is-active', i === current)
+          );
+        }
+
+        prev.addEventListener('click', () => goTo(current - 1));
+        next.addEventListener('click', () => goTo(current + 1));
+
+        // Touch swipe
+        let touchStartX = 0;
+        track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        track.addEventListener('touchend',   e => {
+          const diff = touchStartX - e.changedTouches[0].clientX;
+          if (Math.abs(diff) > 50) goTo(diff > 0 ? current + 1 : current - 1);
+        });
+
+        // Auto-advance
+        let timer = setInterval(() => goTo(current + 1), 5000);
+        [prev, next].forEach(btn => btn.addEventListener('click', () => { clearInterval(timer); timer = setInterval(() => goTo(current + 1), 5000); }));
+      })();
+
+      /* ── Reviews: load from API & render carousel ── */
+      (function () {
+        const track  = document.getElementById('reviewsTrack');
+        const dotsEl = document.getElementById('reviewsDots');
+        if (!track) return;
+
+        function buildCard(r) {
+          const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+          const initial = (r.name || '?')[0].toUpperCase();
+          const card = document.createElement('div');
+          card.className = 'review-card';
+          card.innerHTML = `
+            <div class="review-stars">${stars}</div>
+            <p class="review-text">"${r.review_text}"</p>
+            <div class="review-author">
+              <div class="review-avatar">${initial}</div>
+              <div>
+                <strong>${r.name}</strong>
+                <span>${r.event_type}</span>
+              </div>
+            </div>`;
+          return card;
+        }
+
+        fetch('/api/public/reviews')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (!data || !data.reviews || !data.reviews.length) return;
+            // Replace placeholder cards with real ones
+            track.innerHTML = '';
+            dotsEl.innerHTML = '';
+            data.reviews.forEach((r, i) => {
+              track.appendChild(buildCard(r));
+              const dot = document.createElement('button');
+              dot.className = 'reviews-dot' + (i === 0 ? ' is-active' : '');
+              dot.setAttribute('aria-label', 'Review ' + (i + 1));
+              dotsEl.appendChild(dot);
+            });
+            // Re-init carousel nav
+            initCarousel();
+          })
+          .catch(() => { /* keep placeholders */ initCarousel(); });
+
+        function initCarousel() {
+          const cards  = track.querySelectorAll('.review-card');
+          const dots   = dotsEl.querySelectorAll('.reviews-dot');
+          const prev   = document.getElementById('reviewsPrev');
+          const next   = document.getElementById('reviewsNext');
+          let current  = 0;
+          const total  = cards.length;
+          if (!total) return;
+
+          function getW() { return cards[0].getBoundingClientRect().width + 20; }
+          function goTo(idx) {
+            current = (idx + total) % total;
+            track.style.transform = `translateX(-${current * getW()}px)`;
+            dots.forEach((d, i) => d.classList.toggle('is-active', i === current));
+          }
+          dots.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+          if (prev) prev.addEventListener('click', () => goTo(current - 1));
+          if (next) next.addEventListener('click', () => goTo(current + 1));
+
+          let touchStart = 0;
+          track.addEventListener('touchstart', e => { touchStart = e.touches[0].clientX; }, { passive: true });
+          track.addEventListener('touchend',   e => {
+            const diff = touchStart - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) goTo(diff > 0 ? current + 1 : current - 1);
+          });
+          let timer = setInterval(() => goTo(current + 1), 5500);
+          [prev, next].forEach(b => b && b.addEventListener('click', () => {
+            clearInterval(timer); timer = setInterval(() => goTo(current + 1), 5500);
+          }));
+        }
+      })();
+
+      /* ── Review modal & form ── */
+      (function () {
+        const backdrop = document.getElementById('reviewModalBackdrop');
+        const openBtn  = document.getElementById('openReviewModal');
+        const closeBtn       = document.getElementById('closeReviewModal');
+        const form           = document.getElementById('reviewForm');
+        const msg            = document.getElementById('reviewFormMsg');
+        const submitBtn      = document.getElementById('reviewSubmitBtn');
+        const ratingEl       = document.getElementById('reviewRating');
+        const stars          = document.querySelectorAll('.star-btn');
+        const starLabelText  = document.getElementById('starLabelText');
+        const reviewEventType= document.getElementById('reviewEventType');
+        const reviewOtherField = document.getElementById('reviewOtherField');
+        const reviewCustomEventType = document.getElementById('reviewCustomEventType');
+
+        const starLabels = { 1: '1 — Poor', 2: '2 — Fair', 3: '3 — Good', 4: '4 — Great', 5: '5 — Excellent' };
+        // Ensure rating is always initialised to 5
+        ratingEl.value = 5;
+
+        if (!backdrop) return;
+
+        function openModal() {
+          backdrop.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+          backdrop.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+
+        openBtn && openBtn.addEventListener('click', openModal);
+        closeBtn && closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        // Star picker
+        function setStarRating(val) {
+          ratingEl.value = val;
+          stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= val));
+          if (starLabelText) starLabelText.textContent = starLabels[val] || '';
+        }
+
+        stars.forEach(star => {
+          star.addEventListener('click', () => {
+            setStarRating(parseInt(star.dataset.val));
+          });
+          star.addEventListener('mouseenter', () => {
+            const val = parseInt(star.dataset.val);
+            stars.forEach(s => s.classList.toggle('hovered', parseInt(s.dataset.val) <= val));
+          });
+          star.addEventListener('mouseleave', () => {
+            stars.forEach(s => s.classList.remove('hovered'));
+          });
+        });
+
+        // "Other" event type show/hide
+        if (reviewEventType && reviewOtherField) {
+          reviewEventType.addEventListener('change', () => {
+            const isOther = reviewEventType.value === 'Other';
+            reviewOtherField.classList.toggle('visible', isOther);
+            if (reviewCustomEventType) reviewCustomEventType.required = isOther;
+          });
+        }
+
+        // Form submit
+        form && form.addEventListener('submit', async e => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const rawEventType = fd.get('eventType');
+          const customEvent  = (fd.get('customEventType') || '').trim();
+          const payload = {
+            name:       fd.get('name'),
+            eventType:  rawEventType === 'Other' && customEvent ? customEvent : rawEventType,
+            reviewText: fd.get('reviewText'),
+            rating:     parseInt(fd.get('rating')) || 5,
+          };
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Sending…';
+          msg.className = 'review-form-msg hidden';
+
+          try {
+            const res = await fetch('/api/public/reviews', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              msg.textContent = data.message || 'Thank you! Your review has been submitted.';
+              msg.className = 'review-form-msg is-success';
+              form.reset();
+              setStarRating(5);
+              if (reviewOtherField) reviewOtherField.classList.remove('visible');
+              if (reviewCustomEventType) reviewCustomEventType.required = false;
+              setTimeout(closeModal, 2800);
+            } else {
+              msg.textContent = data.error || 'Something went wrong. Please try again.';
+              msg.className = 'review-form-msg is-error';
+            }
+          } catch {
+            msg.textContent = 'Network error. Please try again.';
+            msg.className = 'review-form-msg is-error';
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Review';
+          }
+        });
+      })();
+
+      /* ── Admin Reviews Panel ── */
+      (function () {
+        const pendingEl  = document.getElementById('adminPendingReviews');
+        const approvedEl = document.getElementById('adminApprovedReviews');
+        const tabBtn = document.querySelector('[data-tab="reviews"]');
+        if (!tabBtn || !pendingEl) return;
+
+        let loaded = false;
+
+        tabBtn.addEventListener('click', () => {
+          if (loaded) return;
+          loaded = true;
+          loadAdminReviews();
+        });
+
+        function loadAdminReviews() {
+          fetch('/api/admin/reviews')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (!data) return;
+              const pending  = data.reviews.filter(r => !r.approved);
+              const approved = data.reviews.filter(r =>  r.approved);
+              renderList(pendingEl,  pending,  false);
+              renderList(approvedEl, approved, true);
+            })
+            .catch(() => {});
+        }
+
+        function renderList(container, reviews, isApproved) {
+          if (!reviews.length) {
+            container.innerHTML = `<div class="empty-state"><h3>${isApproved ? 'No approved reviews yet' : 'No pending reviews'}</h3><p>${isApproved ? 'Approve a pending review to publish it.' : 'When clients submit reviews they will appear here.'}</p></div>`;
+            return;
+          }
+          container.innerHTML = '';
+          reviews.forEach(r => {
+            const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+            const card = document.createElement('div');
+            card.className = 'admin-review-card lead-card';
+            card.dataset.id = r.id;
+            card.innerHTML = `
+              <div class="lead-card-top">
+                <div>
+                  <span class="badge ${isApproved ? 'status-confirmed' : 'status-enquiry'}">${isApproved ? 'Live' : 'Pending'}</span>
+                  <h3 class="client-title">${r.name}</h3>
+                </div>
+                <div class="card-actions">
+                  ${!isApproved ? `<button class="edit-button admin-approve-btn" data-id="${r.id}">Approve</button>` : ''}
+                  <button class="delete-button admin-delete-btn" data-id="${r.id}">Delete</button>
+                </div>
+              </div>
+              <div class="lead-meta">
+                <span>${r.event_type}</span>
+                <span style="color:var(--gold)">${stars}</span>
+                <span>${r.created_at ? r.created_at.slice(0, 10) : ''}</span>
+              </div>
+              <div class="lead-notes" style="font-style:italic">"${r.review_text}"</div>`;
+            container.appendChild(card);
+          });
+
+          container.querySelectorAll('.admin-approve-btn').forEach(btn => {
+            btn.addEventListener('click', () => reviewAction(btn.dataset.id, 'approve'));
+          });
+          container.querySelectorAll('.admin-delete-btn').forEach(btn => {
+            btn.addEventListener('click', () => reviewAction(btn.dataset.id, 'delete'));
+          });
+        }
+
+        function reviewAction(id, action) {
+          fetch(`/api/admin/reviews/${id}/${action}`, { method: 'PUT' })
+            .then(r => r.ok ? (loaded = false, loadAdminReviews()) : null)
+            .catch(() => {});
+        }
+      })();
+
+      /* ── Smooth anchor scroll ── */
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const target = document.querySelector(a.getAttribute('href'));
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+    })();
+    </script>
+  </body>
+</html>
