@@ -1425,586 +1425,538 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         self.wfile.write(slide_bytes)
 
 
-def generate_quote_pdf(client_name: str, events: list, package: str, price: str) -> bytes:
-    """Generate a luxury Tales by DVS quote PDF — premium redesign."""
+def generate_quote_pdf(client_name, events, package, price):
+    """Tales by DVS - v8: matches user-designed 6-page layout."""
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.utils import ImageReader
+    from PIL import Image as PILImage
     import random
 
-    # ── Register Lato fonts ──────────────────────────────────────────────────
     LATO_DIR = "/usr/share/fonts/truetype/lato"
-    for fname, ffile in [
-        ("Lato",        "Lato-Regular"),
-        ("Lato-Bold",   "Lato-Bold"),
-        ("Lato-Light",  "Lato-Light"),
-        ("Lato-Black",  "Lato-Black"),
-        ("Lato-Italic", "Lato-Italic"),
-        ("Lato-Thin",   "Lato-Thin"),
-    ]:
-        try:
-            pdfmetrics.registerFont(TTFont(fname, f"{LATO_DIR}/{ffile}.ttf"))
-        except Exception:
-            pass
+    for fname, ffile in [("Lato","Lato-Regular"),("Lato-Bold","Lato-Bold"),
+                          ("Lato-Light","Lato-Light"),("Lato-Black","Lato-Black"),
+                          ("Lato-Italic","Lato-Italic")]:
+        try: pdfmetrics.registerFont(TTFont(fname, f"{LATO_DIR}/{ffile}.ttf"))
+        except: pass
 
     buf = io.BytesIO()
-    W, H = A4   # ~595 x 842 pts
-
-    ASSET_DIR = PROJECT_ROOT / "assets" / "quote"
+    W, H = A4
+    ASSET = PROJECT_ROOT / "assets" / "quote"
     today = datetime.now().strftime("%B %d, %Y")
-
     c = rl_canvas.Canvas(buf, pagesize=A4)
 
-    # ── Palette ──────────────────────────────────────────────────────────────
-    NAVY  = HexColor('#0B1520')
-    NAVY2 = HexColor('#0F1E30')
-    GOLD  = HexColor('#C9A84C')
-    LGOLD = HexColor('#D9BC72')
-    WHITE = HexColor('#FFFFFF')
-    CREAM = HexColor('#EDE3D4')
-    MUTED = HexColor('#8A7E6E')
+    # Colour palette matching design
+    CREAM    = HexColor('#F4EFE6')   # warm cream bg (pages 1,3,4)
+    BEIGE    = HexColor('#EAE2D5')   # slightly darker beige
+    NAVY     = HexColor('#162038')   # table rows
+    NAVY2    = HexColor('#1E2D46')   # alt row
+    GOLD     = HexColor('#C9A84C')
+    CHAMPAGNE= HexColor('#E8CC80')
+    DARK     = HexColor('#1A1510')   # near-black text on light
+    ESPRESSO = HexColor('#0A0806')   # dark page bg
+    WHITE    = HexColor('#FFFFFF')
+    IVORY    = HexColor('#F5EDD8')
+    MUTED    = HexColor('#7A6E60')
 
-    # ── Layout constants ─────────────────────────────────────────────────────
-    PAD = 38
-    TW  = W - PAD * 2
+    PAD = 38;  TW = W - PAD * 2
+    TN = "Times-Roman";  TNB = "Times-Bold";  TNI = "Times-Italic"
 
-    # ── Helper: centred word-wrap, returns new y ─────────────────────────────
-    def centre_wrap(text, y, font="Lato", size=9, color=CREAM, max_w=W - 90, gap=13):
-        c.setFont(font, size)
-        c.setFillColor(color)
-        words = text.split()
-        line = ""
+    # ---- helpers --------------------------------------------------------
+
+    def centre_wrap(text, y, font=TN, size=10, color=None, max_w=None, gap=15, cx=None):
+        if color is None: color = DARK
+        if max_w is None: max_w = TW - 20
+        if cx is None: cx = W / 2
+        c.setFont(font, size); c.setFillColor(color)
+        words = text.split(); line = ""
         for w in words:
-            test = (line + " " + w).strip()
-            if c.stringWidth(test, font, size) <= max_w:
-                line = test
-            else:
-                c.drawCentredString(W / 2, y, line)
-                y -= gap
-                line = w
-        if line:
-            c.drawCentredString(W / 2, y, line)
-            y -= gap
+            t = (line+" "+w).strip()
+            if c.stringWidth(t, font, size) <= max_w: line = t
+            else: c.drawCentredString(cx, y, line); y -= gap; line = w
+        if line: c.drawCentredString(cx, y, line); y -= gap
         return y
 
-    # ── Helper: left-aligned word-wrap, returns new y ────────────────────────
-    def left_wrap(text, x, y, font="Lato", size=9, color=CREAM, max_w=W - 80, gap=12):
-        c.setFont(font, size)
-        c.setFillColor(color)
-        words = text.split()
-        line = ""
+    def left_wrap(text, x, y, font=TN, size=9, color=None, max_w=None, gap=13):
+        if color is None: color = DARK
+        if max_w is None: max_w = TW - 10
+        c.setFont(font, size); c.setFillColor(color)
+        words = text.split(); line = ""
         for w in words:
-            test = (line + " " + w).strip()
-            if c.stringWidth(test, font, size) <= max_w:
-                line = test
-            else:
-                c.drawString(x, y, line)
-                y -= gap
-                line = w
-        if line:
-            c.drawString(x, y, line)
-            y -= gap
+            t = (line+" "+w).strip()
+            if c.stringWidth(t, font, size) <= max_w: line = t
+            else: c.drawString(x, y, line); y -= gap; line = w
+        if line: c.drawString(x, y, line); y -= gap
         return y
 
-    # ── Helper: horizontal rule ───────────────────────────────────────────────
-    def hline(y, col=GOLD, lw=0.6, pad=36):
-        c.setStrokeColor(col)
-        c.setLineWidth(lw)
-        c.line(pad, y, W - pad, y)
+    def txt(text, x, y, size=10, color=None, font="Lato", align="left"):
+        if color is None: color = DARK
+        c.setFillColor(color); c.setFont(font, size)
+        if align=="center": c.drawCentredString(x, y, text)
+        elif align=="right": c.drawRightString(x, y, text)
+        else: c.drawString(x, y, text)
 
-    # ── Helper: quick text draw ───────────────────────────────────────────────
-    def txt(text, x, y, size=10, color=WHITE, font="Lato", align="left"):
-        c.setFillColor(color)
-        c.setFont(font, size)
-        if align == "center":   c.drawCentredString(x, y, text)
-        elif align == "right":  c.drawRightString(x, y, text)
-        else:                   c.drawString(x, y, text)
+    def hairline(y, col=None, lw=0.3, x1=None, x2=None):
+        if col is None: col = DARK
+        if x1 is None: x1 = PAD
+        if x2 is None: x2 = W - PAD
+        c.setStrokeColor(col); c.setLineWidth(lw); c.line(x1, y, x2, y)
 
-    # ── Helper: navy background ───────────────────────────────────────────────
-    def navy_bg():
-        c.setFillColor(NAVY)
-        c.rect(0, 0, W, H, fill=1, stroke=0)
+    def page_box(col=None):
+        if col is None: col = HexColor('#C0B090')
+        c.setStrokeColor(col); c.setLineWidth(0.5)
+        c.rect(12, 12, W-24, H-24, fill=0, stroke=1)
 
-    # ── Helper: draw logo, return bottom-y of logo ────────────────────────────
-    def draw_logo(cx, top_y, logo_w=180):
-        logo_h = logo_w / 1.775   # 600/338 aspect ratio
+    def draw_logo(cx, top_y, logo_w=160):
+        logo_h = logo_w / 1.778
         try:
-            c.drawImage(ImageReader(str(ASSET_DIR / "logo.png")),
-                        cx - logo_w / 2, top_y - logo_h,
-                        logo_w, logo_h, mask="auto")
-        except Exception:
-            c.setFillColor(GOLD)
-            c.setFont("Lato-Bold", 20)
-            c.drawCentredString(cx, top_y - 28, "tales by DVS")
-            logo_h = 28
+            c.drawImage(ImageReader(str(ASSET / "logo.png")),
+                        cx - logo_w/2, top_y - logo_h, logo_w, logo_h, mask="auto")
+        except:
+            c.setFillColor(DARK); c.setFont(TNI, 16)
+            c.drawCentredString(cx, top_y - 20, "tales by DVS"); logo_h = 20
         return top_y - logo_h
 
-    # ── Helper: programmatic gold bokeh dots ──────────────────────────────────
-    def draw_bokeh(seed=42, count=55, y_top=H, y_bot=0):
-        rng = random.Random(seed)
-        c.saveState()
-        for _ in range(count):
-            bx = rng.uniform(0, W)
-            by = rng.uniform(y_bot, y_top)
-            br = rng.uniform(1.5, 9)
-            ba = rng.uniform(0.03, 0.20)
-            c.setFillColor(GOLD)
-            c.setFillAlpha(ba)
-            c.circle(bx, by, br, fill=1, stroke=0)
-        c.setFillAlpha(1)
-        c.restoreState()
-
-    # ── Helper: draw photo clipped to rect ───────────────────────────────────
-    def draw_photo(photo_name, x, y, pw, ph):
+    def photo_fill(fname, cx, cy, cw, ch):
+        try:
+            img = PILImage.open(str(ASSET / fname))
+            iw, ih = img.size
+        except: iw, ih = 3, 2
+        ia = iw/ih; ca = cw/ch
+        if ia > ca: dh=ch; dw=ch*ia
+        else:       dw=cw; dh=cw/ia
+        dx = cx+(cw-dw)/2; dy = cy+(ch-dh)/2
         try:
             c.saveState()
-            p = c.beginPath()
-            p.rect(x, y, pw, ph)
+            p = c.beginPath(); p.rect(cx, cy, cw, ch)
             c.clipPath(p, stroke=0, fill=0)
-            c.drawImage(ImageReader(str(ASSET_DIR / photo_name)),
-                        x, y, pw, ph, mask="auto", preserveAspectRatio=False)
+            c.drawImage(ImageReader(str(ASSET / fname)),
+                        dx, dy, dw, dh, mask="auto", preserveAspectRatio=False)
             c.restoreState()
-        except Exception:
-            c.saveState()
-            c.setFillColor(NAVY2)
-            c.rect(x, y, pw, ph, fill=1, stroke=0)
-            c.restoreState()
+        except:
+            c.saveState(); c.setFillColor(BEIGE)
+            c.rect(cx, cy, cw, ch, fill=1, stroke=0); c.restoreState()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  PAGE 1 — Full-bleed Cover Photo + Events Table
-    # ══════════════════════════════════════════════════════════════════════════
+    def brush_header(label, cx, y, width):
+        """Gold rounded-rect simulating brush-stroke column header."""
+        bh = 26; bx = cx - width/2
+        c.setFillColor(GOLD)
+        c.roundRect(bx, y - bh + 6, width, bh, 4, fill=1, stroke=0)
+        c.setFillColor(ESPRESSO); c.setFont(TNB, 9)
+        c.drawCentredString(cx, y - bh + 13, label)
 
-    # 1a. Full-bleed wedding photo (cover_bg.jpg already A4-proportioned)
-    try:
-        c.drawImage(ImageReader(str(ASSET_DIR / "cover_bg.jpg")),
-                    0, 0, W, H, preserveAspectRatio=False)
-    except Exception:
-        navy_bg()
+    def bullet_diamond(x, y):
+        c.saveState(); c.setFillColor(GOLD)
+        c.translate(x, y); c.rotate(45)
+        c.rect(-3, -3, 6, 6, fill=1, stroke=0); c.restoreState()
 
-    # 1b. Dark gradient overlay — almost opaque at bottom, barely visible at top
-    overlay_h = H * 0.78
-    steps = 42
-    for i in range(steps):
-        frac = i / steps
-        alpha = 0.96 - frac * 0.93
-        c.setFillColor(NAVY)
-        c.setFillAlpha(alpha)
-        band_h = overlay_h / steps
-        c.rect(0, i * band_h, W, band_h + 1, fill=1, stroke=0)
-    c.setFillAlpha(1)
+    def footer_light(name):
+        hairline(32, HexColor('#C0B090'), 0.4)
+        txt("Quote prepared for "+name+"   •   "+today+"   •   Tales by DVS",
+            W/2, 18, size=7, color=MUTED, font=TNI, align="center")
 
-    # 1c. Semi-transparent navy bar at very top for logo readability
-    c.setFillColor(NAVY)
-    c.setFillAlpha(0.60)
-    c.rect(0, H - 115, W, 115, fill=1, stroke=0)
-    c.setFillAlpha(1)
+    def footer_dark(name):
+        hairline(32, HexColor('#6A5A40'), 0.4)
+        txt("Quote prepared for "+name+"   •   "+today+"   •   Tales by DVS",
+            W/2, 18, size=7, color=MUTED, font=TNI, align="center")
 
-    # 1d. Logo — top center
-    logo_bot = draw_logo(W / 2, H - 14, 210)
+    # =====================================================================
+    # PAGE 1  –  COVER  (cream bg, triptych photos, greeting)
+    # =====================================================================
+    c.setFillColor(CREAM); c.rect(0, 0, W, H, fill=1, stroke=0)
+    page_box(HexColor('#C0B090'))
 
-    # 1e. Thin gold rule below logo
-    hline(logo_bot - 8, GOLD, 0.8)
+    # Logo top center
+    logo_bot = draw_logo(W/2, H - 18, 170)
 
-    # 1f. Greeting
-    txt(f"DEAR {client_name.upper()},",
-        W / 2, logo_bot - 26, size=15, color=GOLD, font="Lato-Light", align="center")
+    # Tagline
+    txt("Timeless stories, told with heart and cinematic artistry.",
+        W/2, logo_bot - 14, size=10, color=DARK, font=TNI, align="center")
 
-    # 1g. Intro
-    intro = (
-        "THANK YOU FOR REACHING US. WE WOULD BE HONOURED TO BE A PART OF YOUR "
-        "CELEBRATIONS AND TO FREEZE YOUR AUSPICIOUS MOMENTS. PLEASE FIND OUR "
-        "SERVICES, DELIVERABLES AND CHARGES LISTED BELOW AS PER YOUR REQUIREMENTS."
-    )
-    iy = centre_wrap(intro, logo_bot - 46, font="Lato", size=8.5, color=CREAM,
-                     max_w=W - 100, gap=13)
+    # Greeting
+    greet_y = logo_bot - 44
+    txt("Dear " + client_name + ",", W/2, greet_y,
+        size=14, color=DARK, font=TNI, align="center")
 
-    # ── Events table ─────────────────────────────────────────────────────────
-    C1W   = 108   # DATE column width
-    C3W   = 90    # TEAM column width
-    C2W   = TW - C1W - C3W   # EVENT NAME
-    ROW_H = 30
-    HDR_H = 26
+    msg_y = greet_y - 22
+    for line in [
+        "We're honored to be a part of your celebration.",
+        "Capturing your moments, timelessly and artfully.",
+        "Please find our curated details below.",
+    ]:
+        txt(line, W/2, msg_y, size=10, color=DARK, font=TN, align="center")
+        msg_y -= 18
 
-    table_top = iy - 18
+    # Triptych  –  3 equal portrait columns
+    GAP = 8
+    COL_W = (TW - GAP*2) / 3
+    PHOTO_H = msg_y - 52 - 80   # leave room for footer text
+    photo_top_y = msg_y - 24
 
-    # Header row — solid gold fill, navy text
-    c.setFillColor(GOLD)
-    c.rect(PAD, table_top - HDR_H, TW, HDR_H, fill=1, stroke=0)
-    c.setFillColor(NAVY)
-    c.setFont("Lato-Bold", 9)
-    c.drawCentredString(PAD + C1W / 2,               table_top - HDR_H + 10, "DATE")
-    c.drawCentredString(PAD + C1W + C2W / 2,         table_top - HDR_H + 10, "EVENT")
-    c.drawCentredString(PAD + C1W + C2W + C3W / 2,   table_top - HDR_H + 10, "TEAM")
+    for i, fname in enumerate(["cover_left.jpg", "cover_center.jpg", "cover_right.jpg"]):
+        px = PAD + i * (COL_W + GAP)
+        photo_fill(fname, px, photo_top_y - PHOTO_H, COL_W, PHOTO_H)
+        # subtle shadow-border
+        c.setStrokeColor(HexColor('#C0B090')); c.setLineWidth(0.5)
+        c.rect(px, photo_top_y - PHOTO_H, COL_W, PHOTO_H, fill=0, stroke=1)
 
-    ry = table_top - HDR_H
-    for i, ev in enumerate(events):
-        row_fill = HexColor('#0F1D2E') if i % 2 == 0 else HexColor('#091523')
-        c.setFillColor(row_fill)
-        c.rect(PAD, ry - ROW_H, TW, ROW_H, fill=1, stroke=0)
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(0.25)
-        c.line(PAD, ry - ROW_H, PAD + TW, ry - ROW_H)
+    # Divider + guarantee footer text
+    div_y = photo_top_y - PHOTO_H - 10
+    hairline(div_y, HexColor('#C0B090'), 0.4)
+    guarantee = ("Guaranteed Deliveries - We're very committed to the deliveries with our talented "
+                 "post-production team to give you processed images and processed videos within 60 "
+                 "days from your payment date.")
+    gy = div_y - 14
+    gy = centre_wrap(guarantee, gy, font=TN, size=8, color=DARK,
+                     max_w=TW - 20, gap=12)
 
-        my = ry - ROW_H / 2 - 4
-        c.setFont("Lato", 9)
-        c.setFillColor(CREAM)
-        c.drawCentredString(PAD + C1W / 2,               my, ev.get("date", "TBD"))
-        c.setFont("Lato-Bold", 9)
-        c.setFillColor(WHITE)
-        c.drawCentredString(PAD + C1W + C2W / 2,         my, ev.get("name", ""))
-        c.setFont("Lato", 9)
-        c.setFillColor(CREAM)
-        c.drawCentredString(PAD + C1W + C2W + C3W / 2,   my, ev.get("team", ""))
-        ry -= ROW_H
-
-    # Outer border + vertical dividers on table
-    c.setStrokeColor(GOLD)
-    c.setLineWidth(0.5)
-    c.rect(PAD, ry, TW, table_top - ry, fill=0, stroke=1)
-    c.setLineWidth(0.25)
-    c.line(PAD + C1W,        table_top - HDR_H, PAD + C1W,        ry)
-    c.line(PAD + C1W + C2W,  table_top - HDR_H, PAD + C1W + C2W,  ry)
-
-    # Footer
-    hline(36, GOLD, 0.5)
-    txt(f"Quote prepared for {client_name}   •   {today}   •   Tales by DVS",
-        W / 2, 22, size=7.5, color=MUTED, font="Lato-Italic", align="center")
-
+    footer_light(client_name)
     c.showPage()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  PAGE 2 — Deliverables / Packages
-    # ══════════════════════════════════════════════════════════════════════════
-    navy_bg()
-    draw_bokeh(seed=101, count=52, y_top=H, y_bot=0)
+    # =====================================================================
+    # PAGE 2  –  EVENTS TABLE  (full-bleed moonlit dancer bg)
+    # =====================================================================
+    # Full-bleed background
+    try:
+        c.drawImage(ImageReader(str(ASSET / "page2_bg.jpg")),
+                    0, 0, W, H, preserveAspectRatio=False)
+    except:
+        c.setFillColor(HexColor('#0D1520')); c.rect(0,0,W,H,fill=1,stroke=0)
 
-    # Small logo top right
-    draw_logo(W - 85, H - 10, 130)
+    # Dark overlay on upper 60% for readability
+    c.setFillColor(HexColor('#0A1020')); c.setFillAlpha(0.55)
+    c.rect(0, H*0.38, W, H*0.62, fill=1, stroke=0); c.setFillAlpha(1)
 
-    txt("DELIVERABLES", W / 2, H - 50, size=28, color=WHITE, font="Lato-Light", align="center")
-    hline(H - 63, GOLD, 1.0)
+    page_box(HexColor('#C9A84C'))
+
+    # Logo
+    draw_logo(W/2, H - 18, 170)
+
+    # Column header brush strokes
+    C1W = 100; C3W = 150; C2W = TW - C1W - C3W
+    c1_cx = PAD + C1W/2
+    c2_cx = PAD + C1W + C2W/2
+    c3_cx = PAD + C1W + C2W + C3W/2
+
+    header_y = H - 105
+    brush_header("DATE",       c1_cx, header_y, C1W - 8)
+    brush_header("EVENT NAME", c2_cx, header_y, C2W - 8)
+    brush_header("TEAM",       c3_cx, header_y, C3W - 8)
+
+    # Table rows
+    ry = header_y - 10
+    for i, ev in enumerate(events):
+        team_raw = ev.get("team", "")
+        parts = team_raw.split(" + ")
+        t1 = parts[0]; t2 = ("+ "+parts[1]) if len(parts)>1 else ""
+        ROW_H = 36 if t2 else 28
+
+        c.setFillColor(NAVY if i%2==0 else NAVY2); c.setFillAlpha(0.88)
+        c.rect(PAD, ry-ROW_H, TW, ROW_H, fill=1, stroke=0); c.setFillAlpha(1)
+
+        mid = ry - ROW_H/2 - 4
+        c.setFont(TN, 9); c.setFillColor(WHITE)
+        c.drawCentredString(c1_cx, mid, ev.get("date","TBD"))
+        c.setFont(TNB, 9)
+        c.drawCentredString(c2_cx, mid, ev.get("event",""))
+        c.setFont(TN, 8.5)
+        if t2:
+            c.drawCentredString(c3_cx, ry-ROW_H/2+2, t1)
+            c.drawCentredString(c3_cx, ry-ROW_H/2-11, t2)
+        else:
+            c.drawCentredString(c3_cx, mid, t1)
+        ry -= ROW_H
+
+    # Outer table border
+    table_top_y = header_y - 10
+    c.setStrokeColor(WHITE); c.setLineWidth(0.5)
+    c.rect(PAD, ry, TW, table_top_y - ry, fill=0, stroke=1)
+    c.setLineWidth(0.25)
+    c.line(PAD+C1W, table_top_y, PAD+C1W, ry)
+    c.line(PAD+C1W+C2W, table_top_y, PAD+C1W+C2W, ry)
+
+    footer_dark(client_name)
+    c.showPage()
+
+    # =====================================================================
+    # PAGE 3  –  DELIVERABLES  (cream bg, B&W watermark bride)
+    # =====================================================================
+    c.setFillColor(CREAM); c.rect(0,0,W,H,fill=1,stroke=0)
+
+    # Faded B&W watermark (left portion)
+    try:
+        c.drawImage(ImageReader(str(ASSET/"page3_watermark.jpg")),
+                    PAD-5, H*0.18, TW*0.52, H*0.60,
+                    preserveAspectRatio=False)
+        # Cream overlay to fade it
+        c.setFillColor(CREAM); c.setFillAlpha(0.55)
+        c.rect(PAD-5, H*0.18, TW*0.52, H*0.60, fill=1, stroke=0)
+        c.setFillAlpha(1)
+    except: pass
+
+    page_box(HexColor('#C0B090'))
+
+    # Logo top right
+    draw_logo(W - 80, H - 18, 110)
+
+    # Heading
+    txt("DELIVERABLES", PAD, H - 45, size=22, color=DARK, font=TNB)
 
     PACKAGES = {
-        "Silver": {
-            "price": price if package == "Silver" else "475",
-            "items": [
-                "Wedding Teaser — Short cinematic teaser combining highlights from all events.",
-                "Wedding Trailer — Full cinematic trailer covering all wedding events.",
-                "Full-length complete videos for each individual event.",
-            ],
-        },
-        "Gold": {
-            "price": price if package == "Gold" else "550",
-            "items": [
-                "Everything in Silver Package, plus:",
-                "Couple Pre-Wedding Photoshoot.",
-            ],
-        },
-        "Platinum": {
-            "price": price if package == "Platinum" else "650",
-            "items": [
-                "Everything in Silver & Gold, plus:",
-                "Exclusive Individual Event Trailers.",
-                "Highlight Reels for Social Media.",
-                "Complimentary Couple Pre-Wedding Photoshoot.",
-            ],
-        },
+        "Silver":   {"price": price if package=="Silver"   else "425",
+                     "items": ["Wedding Teaser - A beautifully crafted short teaser combining highlights from all events.",
+                                "Wedding Trailer - A cinematic trailer covering all wedding events in one stunning film.",
+                                "Full-Length complete videos for each event."]},
+        "Gold":     {"price": price if package=="Gold"     else "500",
+                     "items": ["Includes everything in our Silver Package along with a Couple Pre-Wedding Photoshoot."]},
+        "Platinum": {"price": price if package=="Platinum" else "575",
+                     "items": ["Includes everything in our Silver and Gold packages, along with:",
+                                "Exclusive Individual Event Trailers.",
+                                "Highlight Reels for Social Media.",
+                                "Complimentary Couple Pre-wedding Photoshoot."]}
     }
 
-    PT_X = 36
-    PT_W = W - 72
-    PC1W = 82    # Package name
-    PC2W = 74    # Price
-    PC3W = PT_W - PC1W - PC2W   # Deliverables
+    # Table geometry
+    PC1W = 90; PC2W = 70; PC3W = TW - PC1W - PC2W
+    py = H - 60
 
-    py = H - 76
-
-    # Header row
-    c.setFillColor(HexColor('#071018'))
-    c.rect(PT_X, py - 22, PT_W, 22, fill=1, stroke=0)
-    c.setStrokeColor(GOLD)
-    c.setLineWidth(0.6)
-    c.rect(PT_X, py - 22, PT_W, 22, fill=0, stroke=1)
-    c.setFillColor(LGOLD)
-    c.setFont("Lato-Bold", 9)
-    c.drawCentredString(PT_X + PC1W / 2,               py - 12, "PACKAGE")
-    c.drawCentredString(PT_X + PC1W + PC2W / 2,        py - 12, "PRICE (USD)")
-    c.drawCentredString(PT_X + PC1W + PC2W + PC3W / 2, py - 12, "WHAT'S INCLUDED")
-    py -= 22
+    # Table header row
+    c.setFillColor(DARK); c.setFillAlpha(0.06)
+    c.rect(PAD, py-24, TW, 24, fill=1, stroke=0); c.setFillAlpha(1)
+    c.setStrokeColor(DARK); c.setLineWidth(0.5)
+    c.rect(PAD, py-24, TW, 24, fill=0, stroke=1)
+    c.setFont(TNI, 10); c.setFillColor(DARK)
+    c.drawCentredString(PAD+PC1W/2, py-15, "Package")
+    c.drawCentredString(PAD+PC1W+PC2W/2, py-15, "Price")
+    c.drawCentredString(PAD+PC1W+PC2W+PC3W/2, py-15, "Deliverables")
+    py -= 24
 
     for pkg_name, pkg_data in PACKAGES.items():
         is_sel = pkg_name == package
-
-        # Pre-wrap deliverable text lines
+        # pre-wrap items
         item_lines = []
         for itm in pkg_data["items"]:
-            words = itm.split()
-            ln = ""
+            words = itm.split(); ln = ""
             for ww in words:
-                test = (ln + " " + ww).strip()
-                if c.stringWidth(test, "Lato", 8.5) <= PC3W - 16:
-                    ln = test
-                else:
-                    item_lines.append(ln)
-                    ln = ww
-            if ln:
-                item_lines.append(ln)
-            item_lines.append("")   # gap between items
+                t = (ln+" "+ww).strip()
+                if c.stringWidth(t, TN, 8.5) <= PC3W-16: ln = t
+                else: item_lines.append(ln); ln = ww
+            if ln: item_lines.append(ln)
+            item_lines.append("")
 
-        rh = max(58, len(item_lines) * 12 + 22)
+        rh = max(70, len(item_lines)*13 + 24)
 
-        row_col = HexColor('#1A3050') if is_sel else HexColor('#10202E')
-        c.setFillColor(row_col)
-        c.rect(PT_X, py - rh, PT_W, rh, fill=1, stroke=0)
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(1.5 if is_sel else 0.4)
-        c.rect(PT_X, py - rh, PT_W, rh, fill=0, stroke=1)
+        # Row bg
+        c.setFillColor(HexColor('#EBE5D8') if is_sel else CREAM)
+        c.rect(PAD, py-rh, TW, rh, fill=1, stroke=0)
+        c.setStrokeColor(HexColor('#B0A090')); c.setLineWidth(0.5)
+        c.rect(PAD, py-rh, TW, rh, fill=0, stroke=1)
 
         if is_sel:
-            c.setFillColor(GOLD)
-            c.rect(PT_X, py - rh, 4, rh, fill=1, stroke=0)
-            bw, bh = 72, 14
-            c.setFillColor(GOLD)
-            c.roundRect(PT_X + PT_W - bw - 6, py - bh - 4, bw, bh, 3, fill=1, stroke=0)
-            c.setFillColor(NAVY)
-            c.setFont("Lato-Bold", 7)
-            c.drawCentredString(PT_X + PT_W - 6 - bw / 2, py - bh + 2, "YOUR PACKAGE")
+            # Gold accent top border for selected
+            c.setStrokeColor(GOLD); c.setLineWidth(2)
+            c.line(PAD, py, PAD+TW, py)
+            c.setLineWidth(0.5)
 
-        mid_r = py - rh / 2
-        c.setFillColor(GOLD if is_sel else LGOLD)
-        c.setFont("Lato-Bold", 12)
-        c.drawCentredString(PT_X + PC1W / 2, mid_r - 5, pkg_name.upper())
+        mid_r = py - rh/2
+        c.setFont(TNI, 11); c.setFillColor(DARK)
+        c.drawCentredString(PAD+PC1W/2, mid_r-4, pkg_name)
+        c.setFont(TNB if is_sel else TN, 14)
+        c.setFillColor(DARK)
+        c.drawCentredString(PAD+PC1W+PC2W/2, mid_r-5, pkg_data["price"])
 
-        c.setFillColor(WHITE if is_sel else CREAM)
-        c.setFont("Lato-Black", 17)
-        c.drawCentredString(PT_X + PC1W + PC2W / 2, mid_r - 7, f"${pkg_data['price']}")
-
-        c.setFont("Lato", 8.5)
-        c.setFillColor(CREAM)
-        ity = py - 14
+        ity = py - 16
+        c.setFont(TN, 8.5); c.setFillColor(DARK)
         for il in item_lines:
             if il:
-                c.drawString(PT_X + PC1W + PC2W + 10, ity, il)
-            ity -= 12
+                c.drawString(PAD+PC1W+PC2W+8, ity, "• "+il)
+            ity -= 13
 
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(0.3)
-        c.line(PT_X + PC1W,         py, PT_X + PC1W,         py - rh)
-        c.line(PT_X + PC1W + PC2W,  py, PT_X + PC1W + PC2W,  py - rh)
-
+        # Column dividers
+        c.setStrokeColor(HexColor('#B0A090')); c.setLineWidth(0.4)
+        c.line(PAD+PC1W, py, PAD+PC1W, py-rh)
+        c.line(PAD+PC1W+PC2W, py, PAD+PC1W+PC2W, py-rh)
         py -= rh
 
-    hline(py - 10, GOLD, 0.4)
-    ny = py - 24
-    notes = [
-        "•  Photos uploaded to a private cloud link — accessible for ONE YEAR from your wedding date.",
-        "•  EDITED PICTURES — All raw pictures shortlisted and processed with light & color corrections.",
-    ]
-    for note in notes:
-        ny = left_wrap(note, PT_X + 4, ny, font="Lato", size=8, color=CREAM,
-                       max_w=PT_W - 8, gap=11)
-        ny -= 4
+    # Notes
+    hairline(py-12, HexColor('#B0A090'), 0.4)
+    ny = py - 26
+    for note in [
+        "• Photos of all the events are uploaded on the cloud and shared through a private link, which can be accessed for ONE YEAR from your wedding",
+        "• EDITED PICTURES - All the raw Pictures are shortlisted and then processed with light and colour corrections.",
+    ]:
+        ny = left_wrap(note, PAD, ny, font=TN, size=8.5, color=DARK, max_w=TW-8, gap=12)
+        ny -= 6
 
-    hline(46, GOLD, 0.8)
-    txt('“WE DON’T PROCESS ANY RAW DATA UNTIL 100% PAYMENT IS DONE”',
-        W / 2, 30, size=8.5, color=GOLD, font="Lato-Italic", align="center")
+    hairline(ny-8, HexColor('#B0A090'), 0.4)
+    txt('"WE DON\'T PROCESS ANY RAW DATA UNTIL 100% PAYMENT IS DONE"',
+        W/2, ny-22, size=9, color=DARK, font=TNB, align="center")
 
+    footer_light(client_name)
     c.showPage()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  PAGE 3 — Terms & Conditions
-    # ══════════════════════════════════════════════════════════════════════════
-    navy_bg()
-    draw_bokeh(seed=202, count=45, y_top=H, y_bot=0)
+    # =====================================================================
+    # PAGE 4  –  TERMS  (cream bg, very faded portrait watermark)
+    # =====================================================================
+    c.setFillColor(BEIGE); c.rect(0,0,W,H,fill=1,stroke=0)
 
-    draw_logo(W - 85, H - 10, 130)
-    txt("TERMS & CONDITIONS", W / 2, H - 50, size=26, color=WHITE,
-        font="Lato-Light", align="center")
-    hline(H - 63, GOLD, 1.0)
+    # Very faded bg photo top portion
+    try:
+        c.drawImage(ImageReader(str(ASSET/"page4_bg.jpg")),
+                    0, H*0.42, W, H*0.58, preserveAspectRatio=False)
+        c.setFillColor(BEIGE); c.setFillAlpha(0.60)
+        c.rect(0, H*0.42, W, H*0.58, fill=1, stroke=0); c.setFillAlpha(1)
+    except: pass
+
+    page_box(HexColor('#C0B090'))
+
+    # Logo top right
+    draw_logo(W-80, H-18, 110)
+
+    # Heading
+    txt("TERMS", W/2, H-52, size=32, color=DARK, font=TNB, align="center")
+    hairline(H-62, HexColor('#C0B090'), 0.4)
 
     terms = [
-        ("1.  SCHEDULING",
-         "The client should provide a schedule 30 days before the wedding date, including dates, "
-         "timings, locations, and start/end times for all events. No last-minute changes. Team "
-         "information will be shared in a group before the event."),
-        ("2.  TRAVEL EXPENSES",
-         "You shall provide travel and accommodation for all outstation events. If accommodation "
-         "is not provided, we will book and add the charges to the final bill."),
-        ("3.  ADVANCE PAYMENTS",
-         "50% of the total amount is required immediately to block your dates; the remaining 50% "
-         "is due on the wedding day. Once the advance is paid, it cannot be refunded. Guaranteed "
-         "delivery within 60 days of your second payment — otherwise we offer a complimentary "
-         "couple shoot."),
-        ("4.  CHANGE OF PLANS",
-         "Any change of plan or postponement will be accommodated based on availability on the new "
-         "dates, ONLY WITH 3 MONTHS PRIOR NOTIFICATION. Otherwise the day is considered an event "
-         "and the advance will not be refunded."),
-        ("5.  HARD DISK / PAYMENTS / BACKUP",
-         "Data is provided over the hard disk ONLY when 100% payment is done. RAW DATA given only "
-         "over hard drive after full payment. No backup kept after 3 months (without payment) or "
-         "1 year (after payment). We are not responsible for data after the due date."),
-        ("6.  TEAM / RESPECT / TIMING",
-         "Our team is well-behaved and we expect the same. Please allow them space and food breaks "
-         "during long events. We respect your time and will arrive on time — please provide "
-         "the correct schedule 30 days prior. Events mentioned 1 hour before start are fine; "
-         "2–3 hours prior counts as shooting time."),
+        ('1. "SCHEDULING"',
+         'The client should provide a schedule 30 days before the wedding date which has the '
+         'dates and timings of events, locations, start and end timings. All the events will be '
+         'planned and will happen according to the information provided by the client, NO changes '
+         'can be done at the "last minute". team information will be available in the group we '
+         'share with you before the event.'),
+        ('2. TRAVEL EXPENSES',
+         'You shall provide travel and accommodation for all outstation events. if accommodation '
+         'is not provided we will head to book one and charges will be added to the final bill '
+         'after the wedding.'),
+        ('3. ADVANCE PAYMENTS',
+         'You shall clear 50% of the whole amount immediately to block the dates, 50% on the '
+         'wedding day. Once the advance is paid and the dates are blocked, it cannot be refunded. '
+         'Guaranteed delivery from 60 days of your second payment, else we offer a free couple shoot.'),
+        ('4. Change of Plans',
+         'Any change of plan and postponement of any event will be accommodated based on our '
+         'availability on the new dates (ONLY WITH 3 MONTHS PRIOR NOTIFICATION). if not informed '
+         'the day will be considered an event and the advance will not be refunded.'),
+        ('5. HARDISK / PAYMENTS / BACKUP-DATA',
+         'DATA is provided over the hard disk to the client only when 100% of the payment is done. '
+         'RAW DATA WILL BE GIVEN ONLY OVER HARDRIVE AFTER THE PAYMENT. we do not keep a backup of '
+         'any wedding after 3 months (without payment) 1 year (after payment). we\'re not responsible '
+         'for the data after the due date.'),
+        ('6. TEAM / RESPECT / TIMING',
+         'All our team is well-behaved and well-mannered, we expect the same in case of any events '
+         'or situations. supporting them in an event will result in good output. Please let them have '
+         'their space for a while to have food during long-day events. we respect your time and will '
+         'be available on time and we expect the same from the clients. mentioning event time one hour '
+         'before the event is fine but 2-3 hours prior will be considered as shooting time, time '
+         'starts from the time mentioned on the schedule by the client.'),
     ]
 
     ty = H - 76
     for heading, body in terms:
-        c.setFillColor(HexColor('#0D1D2E'))
-        c.rect(36, ty - 18, TW, 18, fill=1, stroke=0)
-        c.setFillColor(GOLD)
-        c.rect(36, ty - 18, 3, 18, fill=1, stroke=0)
-        c.setFont("Lato-Bold", 9)
-        c.setFillColor(GOLD)
-        c.drawString(44, ty - 11, heading)
-        ty -= 20
-        ty = left_wrap(body, 44, ty, font="Lato", size=8.5, color=CREAM,
-                       max_w=TW - 12, gap=12)
-        ty -= 12
-        if ty < 46:
-            break
+        c.setFont(TNB, 9); c.setFillColor(DARK)
+        c.drawString(PAD, ty, heading)
+        ty -= 14
+        ty = left_wrap(body, PAD+8, ty, font=TN, size=8.5, color=DARK,
+                       max_w=TW-10, gap=12)
+        ty -= 10
+        if ty < 44: break
 
-    hline(36, GOLD, 0.4)
-
+    footer_light(client_name)
     c.showPage()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  PAGE 4 — Conditions
-    # ══════════════════════════════════════════════════════════════════════════
-    navy_bg()
-    draw_bokeh(seed=303, count=45, y_top=H, y_bot=0)
+    # =====================================================================
+    # PAGE 5  –  CONDITIONS  (dark warm bg, dramatic photo at bottom)
+    # =====================================================================
+    c.setFillColor(HexColor('#1A1208')); c.rect(0,0,W,H,fill=1,stroke=0)
 
-    draw_logo(W - 85, H - 10, 130)
-    txt("CONDITIONS", W / 2, H - 50, size=26, color=WHITE,
-        font="Lato-Light", align="center")
-    hline(H - 63, GOLD, 1.0)
+    # Bottom dramatic photo strip (~35% of page)
+    PHOTO_STRIP_H = H * 0.36
+    try:
+        photo_fill("page5_bottom.jpg", 0, 0, W, PHOTO_STRIP_H)
+        # Gradient fade top of photo into dark bg
+        for alpha, frac in ((0.98,0.55),(0.80,0.35),(0.50,0.18)):
+            c.setFillColor(HexColor('#1A1208')); c.setFillAlpha(alpha)
+            c.rect(0, PHOTO_STRIP_H*(1-frac), W, PHOTO_STRIP_H*frac, fill=1, stroke=0)
+        c.setFillAlpha(1)
+    except: pass
+
+    page_box(HexColor('#C9A84C'))
+
+    # Logo top right
+    draw_logo(W-80, H-18, 110)
+
+    # Heading
+    txt("CONDITIONS", W/2, H-52, size=28, color=WHITE, font=TNB, align="center")
+    hairline(H-64, HexColor('#C9A84C'), 0.5)
 
     conditions = [
-        ("WE DON’T PROVIDE SERVICES FOR ANY EVENT NOT MENTIONED IN THE QUOTE.", True),
-        ("Processed images & videos delivered within 60 days from the 2nd payment date.", False),
-        ("FOOD COVERAGE done only if mentioned. Prior notification required.", False),
-        ("WE DON’T PROVIDE “BANNERS”, “PLAY CARDS”, “FLEXIS” OR “INVITATIONS”.", True),
-        ("Raw data provided on SmugMug ONLY AFTER 10 days of the wedding date.", False),
-        ("HARD DRIVE — 2 × 2TB SSDs must be provided by the Client before the first event. "
-         "We provide all raw and processed data over the hard drive provided by the client.", False),
+        "WE DON'T PROVIDE SERVICES FOR ANY EVENT THAT IS NOT MENTIONED IN THE QUOTE.",
+        "Processed images and videos will be delivered within 60 days from the 2nd payment date.",
+        "FOOD COVERAGE' will be done only if mentioned as we have limited sources for the wedding, prior notification is needed to cover the food.",
+        'WE DON\'T PROVIDE "BANNERS" "PLAY CARDS" "FLEXIS" & "INVITATIONS"',
+        "We provide raw data on SmugMug only AFTER 10 days of the wedding date.",
+        "HARD DRIVE - 2 X 2TB HARDRIVES(SSD) Should be provided by the Client before the first event of the wedding rituals, We provide all the raw data and processed data over the hard drive provided by the client.",
     ]
 
-    cy = H - 76
-    for cond_text, is_bold in conditions:
-        font_used = "Lato-Bold" if is_bold else "Lato"
-        words = cond_text.split()
-        lines_est = []
-        ln = ""
+    cy = H - 80
+    for cond in conditions:
+        is_bold = cond == cond.upper() or cond.startswith("WE DON") or cond.startswith("HARD")
+        font_used = TNB if is_bold else TN
+        words = cond.split(); lines = []; ln = ""
         for ww in words:
-            test = (ln + " " + ww).strip()
-            if c.stringWidth(test, font_used, 9) <= TW - 52:
-                ln = test
-            else:
-                lines_est.append(ln)
-                ln = ww
-        if ln:
-            lines_est.append(ln)
+            t = (ln+" "+ww).strip()
+            if c.stringWidth(t, font_used, 9) <= TW-30: ln = t
+            else: lines.append(ln); ln = ww
+        if ln: lines.append(ln)
 
-        ch = max(32, len(lines_est) * 13 + 16)
-
-        c.setFillColor(HexColor('#0F1E2E'))
-        c.roundRect(36, cy - ch, TW, ch, 4, fill=1, stroke=0)
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(0.3)
-        c.roundRect(36, cy - ch, TW, ch, 4, fill=0, stroke=1)
-
-        # Gold diamond bullet
-        bx, by_b = 51, cy - ch / 2 + 2
-        c.saveState()
-        c.setFillColor(GOLD)
-        c.translate(bx, by_b)
-        c.rotate(45)
-        c.rect(-4, -4, 8, 8, fill=1, stroke=0)
-        c.restoreState()
+        # Diamond bullet
+        bullet_diamond(PAD+8, cy - 5)
 
         c.setFont(font_used, 9)
-        c.setFillColor(WHITE if is_bold else CREAM)
-        liy = cy - 14
-        for lline in lines_est:
-            c.drawString(62, liy, lline)
-            liy -= 13
+        c.setFillColor(WHITE if is_bold else IVORY)
+        liy = cy
+        for ll in lines:
+            c.drawString(PAD+20, liy, ll); liy -= 13; cy -= 13
+        cy -= 14
+        if cy < PHOTO_STRIP_H + 20: break
 
-        cy -= ch + 9
-        if cy < 46:
-            break
-
-    hline(36, GOLD, 0.4)
-
+    footer_dark(client_name)
     c.showPage()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    #  PAGE 5 — Thank You
-    # ══════════════════════════════════════════════════════════════════════════
-    navy_bg()
-
-    # Full-bleed photo at top (thankyou_wide.jpg is 16:9)
-    strip_h = H * 0.42
+    # =====================================================================
+    # PAGE 6  –  THANK YOU  (full-bleed holi/warm bg)
+    # =====================================================================
     try:
-        c.drawImage(ImageReader(str(ASSET_DIR / "thankyou_wide.jpg")),
-                    0, H - strip_h, W, strip_h, preserveAspectRatio=False)
-    except Exception:
-        draw_bokeh(seed=404, count=25, y_top=H, y_bot=H - strip_h)
+        c.drawImage(ImageReader(str(ASSET/"page6_bg.jpg")),
+                    0, 0, W, H, preserveAspectRatio=False)
+    except:
+        c.setFillColor(HexColor('#3A2010')); c.rect(0,0,W,H,fill=1,stroke=0)
 
-    # Gradient fade from photo into navy
-    fade_steps = 32
-    fade_zone = strip_h * 0.45
-    for i in range(fade_steps):
-        alpha = (i / fade_steps) ** 1.6
-        c.setFillColor(NAVY)
-        c.setFillAlpha(alpha)
-        bh = fade_zone / fade_steps
-        c.rect(0, H - strip_h + i * bh, W, bh + 1, fill=1, stroke=0)
-    c.setFillAlpha(1)
+    # Light overlay top portion for text readability
+    c.setFillColor(WHITE); c.setFillAlpha(0.42)
+    c.rect(0, H*0.62, W, H*0.38, fill=1, stroke=0); c.setFillAlpha(1)
 
-    # Bokeh in the navy section
-    draw_bokeh(seed=505, count=38, y_top=H - strip_h + 30, y_bot=0)
+    page_box(HexColor('#C9A84C'))
 
-    # Gold rule at boundary
-    hline(H - strip_h + 6, GOLD, 1.5)
+    # Logo
+    draw_logo(W/2, H-18, 160)
 
-    # Content — centered in navy section below photo
-    below_photo = H - strip_h
+    # "Client Galleries" — underlined hyperlink
+    link_y = H - 90
+    c.setFont(TNB, 18); c.setFillColor(DARK)
+    lw2 = c.stringWidth("Client Galleries", TNB, 18)
+    c.drawCentredString(W/2, link_y, "Client Galleries")
+    c.setStrokeColor(DARK); c.setLineWidth(1.2)
+    c.line(W/2 - lw2/2, link_y-2, W/2 + lw2/2, link_y-2)
+    c.linkURL("https://www.talesbydvs.com",
+              (W/2-lw2/2, link_y-4, W/2+lw2/2, link_y+18), relative=0)
 
-    txt("IT’S YOUR BIG DAY!", W / 2, below_photo - 28, size=22,
-        color=GOLD, font="Lato-Light", align="center")
-    txt("MAKE IT MORE MEMORABLE WITH US.", W / 2, below_photo - 52, size=13,
-        color=CREAM, font="Lato-Light", align="center")
+    txt("ITS YOUR BIG DAY!", W/2, link_y-28, size=16, color=DARK, font=TNB, align="center")
+    txt("MAKE IT MORE MEMORABLE WITH US!", W/2, link_y-50, size=13, color=DARK, font=TNB, align="center")
 
-    hline(below_photo - 66, GOLD, 0.6)
+    # THANK YOU in large
+    txt("THANK YOU!", W/2, link_y-94, size=42, color=DARK, font=TNB, align="center")
 
-    logo_b = draw_logo(W / 2, below_photo - 76, 230)
-
-    hline(logo_b - 12, GOLD, 0.6)
-
-    txt("THANK YOU!", W / 2, logo_b - 42, size=30, color=WHITE,
-        font="Lato-Black", align="center")
-
-    txt("We look forward to being a part of your story.",
-        W / 2, logo_b - 66, size=10, color=MUTED, font="Lato-Italic", align="center")
-
-    # Three thumbnail photos in a row at the very bottom
-    ph_w = (TW - 20) / 3
-    ph_h = ph_w * (2 / 3)   # 3:2 matches thumb*.jpg crops
-    strip_bot_y = 50
-
-    for pi, ph_name in enumerate(["thumb1.jpg", "thumb2.jpg", "thumb3.jpg"]):
-        px = PAD + pi * (ph_w + 10)
-        draw_photo(ph_name, px, strip_bot_y, ph_w, ph_h)
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(0.6)
-        c.rect(px, strip_bot_y, ph_w, ph_h, fill=0, stroke=1)
-
-    hline(strip_bot_y - 6, GOLD, 0.5)
-    txt(f"Quote prepared for {client_name}   •   {today}   •   Tales by DVS",
-        W / 2, strip_bot_y - 20, size=7.5, color=MUTED, font="Lato-Italic", align="center")
-
+    footer_dark(client_name)
     c.showPage()
     c.save()
     buf.seek(0)
