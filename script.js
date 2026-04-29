@@ -3630,84 +3630,156 @@ function renderTeamDueBreakdown() {
   });
 }
 
+// Team schedule state
+let tsMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
 function renderTeamSchedule() {
   const container = document.getElementById("teamScheduleList");
   if (!container) return;
 
-  // Collect all assignments as flat rows
-  const rows = [];
+  const memberColors = ["#b85c34","#6b7c5e","#8b6b4e","#5a7a8a","#a0785a","#7a6b8a","#5a8a6b","#8a5a6b"];
+  const initials = (name) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  // Collect all events
+  const allEvents = [];
 
   state.leads.forEach((lead) => {
     if (lead.source === "wedding-plan") return;
     (lead.teamAssignments || []).forEach((item) => {
-      if (!item.name) return;
-      rows.push({
-        member: item.name.trim(),
-        client: lead.clientName || "Unknown",
-        event: lead.eventType || "Event",
-        date: lead.eventDate || "",
-      });
+      if (!item.name || !lead.eventDate) return;
+      allEvents.push({ member: item.name.trim(), client: lead.clientName || "Unknown", event: lead.eventType || "Event", date: lead.eventDate });
     });
   });
 
   state.weddingPlans.forEach((plan) => {
-    (plan.events || []).forEach((event) => {
-      (event.teamAssignments || []).forEach((item) => {
+    (plan.events || []).forEach((ev) => {
+      const date = ev.eventDate || plan.weddingDate;
+      if (!date) return;
+      (ev.teamAssignments || []).forEach((item) => {
         if (!item.name) return;
-        rows.push({
-          member: item.name.trim(),
-          client: plan.clientName || "Unknown",
-          event: event.eventName || "Wedding Event",
-          date: event.eventDate || plan.weddingDate || "",
-        });
+        allEvents.push({ member: item.name.trim(), client: plan.clientName || "Unknown", event: ev.eventName || "Wedding Event", date });
       });
     });
   });
 
-  if (!rows.length) {
+  if (!allEvents.length) {
     container.innerHTML = `<div class="empty-state"><h3>No team assignments yet</h3><p>Assign team members to events to see them here.</p></div>`;
     return;
   }
 
-  // Sort by date then member name
-  rows.sort((a, b) => (a.date || "").localeCompare(b.date || "") || a.member.localeCompare(b.member));
-
-  // Get unique member names for avatar colours
-  const members = [...new Set(rows.map(r => r.member))].sort();
-  const memberColors = ["#b85c34","#6b7c5e","#8b6b4e","#5a7a8a","#a0785a","#7a6b8a","#5a8a6b","#8a5a6b"];
+  const members = [...new Set(allEvents.map(e => e.member))].sort();
   const colorMap = Object.fromEntries(members.map((m, i) => [m, memberColors[i % memberColors.length]]));
 
-  const initials = (name) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  // Get days in current month
+  const [year, mon] = tsMonth.split("-").map(Number);
+  const daysInMonth = new Date(year, mon, 0).getDate();
+  const monthLabel = new Date(year, mon - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  // Filter events for this month
+  const monthEvents = allEvents.filter(e => e.date && e.date.startsWith(tsMonth));
+
+  // Build day -> member -> events map
+  const grid = {};
+  monthEvents.forEach(ev => {
+    const day = parseInt(ev.date.split("-")[2]);
+    if (!grid[day]) grid[day] = {};
+    if (!grid[day][ev.member]) grid[day][ev.member] = [];
+    grid[day][ev.member].push(ev);
+  });
+
+  // Active event days (for header highlight)
+  const activeDays = new Set(Object.keys(grid).map(Number));
+  const today = new Date();
+  const todayDay = today.getFullYear() === year && today.getMonth() + 1 === mon ? today.getDate() : null;
+
+  const daysHtml = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = i + 1;
+    const isToday = d === todayDay;
+    const hasEvent = activeDays.has(d);
+    return `<div class="ts-day-head ${isToday ? "ts-today" : ""} ${hasEvent ? "ts-has-event" : ""}">
+      <span class="ts-day-num">${d}</span>
+    </div>`;
+  }).join("");
+
+  const lanesHtml = members.map(member => {
+    const color = colorMap[member];
+    const cellsHtml = Array.from({ length: daysInMonth }, (_, i) => {
+      const d = i + 1;
+      const evs = grid[d]?.[member] || [];
+      const chips = evs.map(ev => `
+        <div class="ts-chip" style="background:${color}18;border-color:${color}40;color:${color}" title="${escapeHtml(ev.client)} — ${escapeHtml(ev.event)}">
+          <span class="ts-chip-dot" style="background:${color}"></span>
+          <span class="ts-chip-text">${escapeHtml(ev.client)}</span>
+        </div>
+      `).join("");
+      return `<div class="ts-cell ${evs.length ? "ts-cell-active" : ""}">${chips}</div>`;
+    }).join("");
+
+    return `
+      <div class="ts-lane">
+        <div class="ts-lane-label">
+          <span class="ts-avatar" style="background:${color}18;color:${color};border-color:${color}40">${initials(member)}</span>
+          <span class="ts-lane-name">${escapeHtml(member)}</span>
+        </div>
+        <div class="ts-lane-cells">${cellsHtml}</div>
+      </div>
+    `;
+  }).join("");
 
   container.innerHTML = `
-    <div class="ts-table-wrap">
-      <table class="ts-table">
-        <thead>
-          <tr>
-            <th>Team Member</th>
-            <th>Client</th>
-            <th>Event</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row, i) => `
-            <tr class="ts-row" style="--row-i:${i}">
-              <td>
-                <div class="ts-member-cell">
-                  <span class="ts-avatar" style="background:${colorMap[row.member]}22;color:${colorMap[row.member]};border-color:${colorMap[row.member]}44">${initials(row.member)}</span>
-                  <strong>${escapeHtml(row.member)}</strong>
-                </div>
-              </td>
-              <td>${escapeHtml(row.client)}</td>
-              <td><span class="ts-event-badge">${escapeHtml(row.event)}</span></td>
-              <td class="ts-date">${row.date ? formatDate(row.date) : "—"}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
+    <div class="ts-swimlane">
+      <div class="ts-nav">
+        <button class="ts-nav-btn" id="tsPrev">&#8592;</button>
+        <span class="ts-month-label">${monthLabel}</span>
+        <button class="ts-nav-btn" id="tsNext">&#8594;</button>
+      </div>
+      <div class="ts-grid-wrap">
+        <div class="ts-grid-scroll">
+          <div class="ts-member-col">
+            <div class="ts-corner"></div>
+            ${members.map(m => `
+              <div class="ts-lane-label-fixed">
+                <span class="ts-avatar" style="background:${colorMap[m]}18;color:${colorMap[m]};border-color:${colorMap[m]}40">${initials(m)}</span>
+                <span class="ts-lane-name">${escapeHtml(m)}</span>
+              </div>
+            `).join("")}
+          </div>
+          <div class="ts-scroll-area">
+            <div class="ts-days-header">${daysHtml}</div>
+            <div class="ts-lanes">
+              ${members.map(member => {
+                const color = colorMap[member];
+                return `<div class="ts-lane-cells">${Array.from({ length: daysInMonth }, (_, i) => {
+                  const d = i + 1;
+                  const evs = grid[d]?.[member] || [];
+                  const isToday = d === todayDay;
+                  const chips = evs.map(ev => `
+                    <div class="ts-chip" style="background:${color}18;border-color:${color}55" title="${escapeHtml(ev.client)} — ${escapeHtml(ev.event)}">
+                      <span class="ts-chip-dot" style="background:${color}"></span>
+                      <span class="ts-chip-text" style="color:${color}">${escapeHtml(ev.client)}</span>
+                    </div>
+                  `).join("");
+                  return `<div class="ts-cell ${evs.length ? "ts-cell-active" : ""} ${isToday ? "ts-cell-today" : ""}">${chips}</div>`;
+                }).join("")}</div>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+      ${!monthEvents.length ? `<p class="ts-empty-month">No events assigned this month. Use the arrows to browse other months.</p>` : ""}
     </div>
   `;
+
+  document.getElementById("tsPrev")?.addEventListener("click", () => {
+    const d = new Date(year, mon - 2, 1);
+    tsMonth = d.toISOString().slice(0, 7);
+    renderTeamSchedule();
+  });
+  document.getElementById("tsNext")?.addEventListener("click", () => {
+    const d = new Date(year, mon, 1);
+    tsMonth = d.toISOString().slice(0, 7);
+    renderTeamSchedule();
+  });
 }
 
 function buildTeamDueByMember() {
