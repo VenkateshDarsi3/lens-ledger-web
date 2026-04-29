@@ -3804,7 +3804,6 @@ function renderTeamSchedule() {
 }
 
 function buildTeamDueByMember() {
-  const confirmedStatuses = new Set(["Confirmed", "Completed"]);
   const buckets = new Map();
 
   const addDue = (member, eventLabel, amount, meta) => {
@@ -3820,7 +3819,7 @@ function buildTeamDueByMember() {
   };
 
   state.leads.forEach((lead) => {
-    if (lead.source === "wedding-plan" || !(lead.source === "manual" || confirmedStatuses.has(lead.status))) return;
+    if (lead.source === "wedding-plan") return;  // wedding-plan leads are handled by the weddingPlans loop below
 
     (lead.teamAssignments || []).forEach((item) => {
       if (item.paymentStatus === "Completed" || item.paid) return;
