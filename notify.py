@@ -28,7 +28,7 @@ PHONE    = "+12175035177"
 # Free test key  → "textbelt"  (1 SMS / day globally, for testing only)
 # Paid key       → buy credits at textbelt.com (~$0.01 / text, no subscription)
 #                  then paste your key below.
-TEXTBELT_KEY = "textbelt"
+TEXTBELT_KEY = "c913874650f2b45607997b472d7a6e02de64593fcvmqqf6Iu6GJsMPQxlncZ6nyr"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
