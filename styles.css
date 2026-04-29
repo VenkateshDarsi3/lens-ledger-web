@@ -1120,15 +1120,40 @@ a { color: inherit; }
 .overview-team-events { display: grid; gap: 8px; }
 .overview-team-event {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
   padding: 10px 14px;
   border-radius: 14px;
   background: rgba(255,255,255,0.6);
 }
-.overview-team-event span { color: var(--muted); font-size: 0.9rem; }
+.overview-team-event span { color: var(--muted); font-size: 0.9rem; flex: 1; min-width: 120px; }
 .overview-team-empty { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+.team-pay-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.team-pay-input {
+  width: 110px;
+  padding: 5px 10px;
+  border: 1.5px solid rgba(118,78,53,0.25);
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  background: rgba(255,255,255,0.9);
+  color: var(--ink);
+  outline: none;
+}
+.team-pay-input:focus { border-color: var(--clay); }
+.team-pay-partial-btn,
+.team-pay-full-btn {
+  padding: 5px 12px !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap;
+}
 
 /* ── Payment Timeline ────────────────────────────────────── */
 .payment-timeline {
