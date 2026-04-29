@@ -4077,3 +4077,163 @@ function upsertById(list, entry) {
     list.unshift(entry);
   }
 }
+
+// ── QUOTE GENERATOR ──────────────────────────────────────────────────────────
+
+const PACKAGE_PRICES = { Silver: '475', Gold: '550', Platinum: '650', Custom: '' };
+
+function initQuoteGenerator() {
+  const form          = document.getElementById('quoteForm');
+  const clientInput   = document.getElementById('qClientName');
+  const packageSel    = document.getElementById('qPackage');
+  const priceInput    = document.getElementById('qPrice');
+  const eventsList    = document.getElementById('quoteEventsList');
+  const addBtn        = document.getElementById('addQuoteEvent');
+  const submitBtn     = document.getElementById('quoteSubmitBtn');
+  const submitLabel   = document.getElementById('quoteSubmitLabel');
+
+  // Preview elements
+  const qpClient      = document.getElementById('qpClientName');
+  const qpBadge       = document.getElementById('qpPkgBadge');
+  const qpEventsBody  = document.getElementById('qpEventsBody');
+  const qpPrice       = document.getElementById('qpPrice');
+
+  if (!form) return;
+
+  // Pre-fill price when package changes
+  packageSel.addEventListener('change', () => {
+    const p = PACKAGE_PRICES[packageSel.value];
+    priceInput.value = p;
+    qpBadge.textContent = packageSel.value;
+    qpBadge.className = 'qp-pkg-badge qp-pkg-' + packageSel.value.toLowerCase();
+    updatePreviewPrice();
+  });
+
+  priceInput.addEventListener('input', updatePreviewPrice);
+  clientInput.addEventListener('input', () => {
+    qpClient.textContent = clientInput.value.trim() || '—';
+  });
+
+  function updatePreviewPrice() {
+    const val = priceInput.value.trim();
+    qpPrice.textContent = val ? '$' + val : '—';
+  }
+
+  // Set initial price
+  priceInput.value = PACKAGE_PRICES[packageSel.value];
+
+  // Add event row
+  function addEventRow(date = '', name = '', team = '2-3') {
+    const row = document.createElement('div');
+    row.className = 'quote-event-row';
+    row.innerHTML = `
+      <input type="date" class="qe-date" value="${date}" placeholder="Date" />
+      <input type="text" class="qe-name" value="${name}" placeholder="Event name (e.g. Wedding)" />
+      <input type="text" class="qe-team" value="${team}" placeholder="Team (e.g. 2-3)" style="width:70px" />
+      <button type="button" class="qe-remove" title="Remove">✕</button>
+    `;
+    row.querySelector('.qe-remove').addEventListener('click', () => {
+      row.remove();
+      syncPreviewEvents();
+    });
+    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncPreviewEvents));
+    eventsList.appendChild(row);
+    syncPreviewEvents();
+  }
+
+  function syncPreviewEvents() {
+    const rows = eventsList.querySelectorAll('.quote-event-row');
+    if (!rows.length) {
+      qpEventsBody.innerHTML = '<tr><td colspan="3" style="text-align:center;opacity:.5">No events yet</td></tr>';
+      return;
+    }
+    qpEventsBody.innerHTML = '';
+    rows.forEach(row => {
+      const d = row.querySelector('.qe-date').value;
+      const n = row.querySelector('.qe-name').value;
+      const t = row.querySelector('.qe-team').value;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${d || 'TBD'}</td><td>${n || '—'}</td><td>${t || '—'}</td>`;
+      qpEventsBody.appendChild(tr);
+    });
+  }
+
+  addBtn.addEventListener('click', () => addEventRow());
+
+  // Pre-populate with common wedding events
+  const defaults = [
+    { name: 'Haldi',   team: '2-3' },
+    { name: 'Mehendi', team: '2-3' },
+    { name: 'Pelli kuthuru and pelli koduku', team: '2-3' },
+    { name: 'Wedding', team: '3-4' },
+    { name: 'Reception', team: '2-3' },
+  ];
+  defaults.forEach(ev => addEventRow('', ev.name, ev.team));
+
+  // Submit → fetch PDF
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const clientName = clientInput.value.trim();
+    if (!clientName) { clientInput.focus(); return; }
+
+    const events = [];
+    eventsList.querySelectorAll('.quote-event-row').forEach(row => {
+      const d = row.querySelector('.qe-date').value;
+      const n = row.querySelector('.qe-name').value.trim();
+      const t = row.querySelector('.qe-team').value.trim();
+      if (n) events.push({ date: d || 'TBD', name: n, team: t || '—' });
+    });
+
+    submitBtn.disabled = true;
+    submitLabel.textContent = 'Generating…';
+
+    try {
+      const res = await fetch('/api/admin/generate-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName,
+          events,
+          package: packageSel.value,
+          price: priceInput.value.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+        alert('Error: ' + (err.error || res.statusText));
+        return;
+      }
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `Quote_${clientName.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to generate quote: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitLabel.textContent = 'Download PDF Quote';
+    }
+  });
+}
+
+// Initialise when the quotes tab is opened
+document.addEventListener('DOMContentLoaded', () => {
+  // Hook into tab switching
+  const quotesTabBtn = document.querySelector('[data-tab="quotes"]');
+  if (quotesTabBtn) {
+    quotesTabBtn.addEventListener('click', () => {
+      if (!document.getElementById('quoteForm')?._qInit) {
+        initQuoteGenerator();
+        if (document.getElementById('quoteForm'))
+          document.getElementById('quoteForm')._qInit = true;
+      }
+    });
+  }
+});

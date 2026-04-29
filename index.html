@@ -512,6 +512,7 @@
         <button class="tab-button" type="button" data-tab="overview">Overview</button>
 
         <button class="tab-button" type="button" data-tab="reviews">Reviews</button>
+        <button class="tab-button" type="button" data-tab="quotes">Quotes</button>
       </nav>
 
       <main>
@@ -680,6 +681,84 @@
                 </div>
               </div>
             </section>
+          </div>
+        </section>
+
+        <!-- ── QUOTES PANEL ───────────────────────────────────────────────── -->
+        <section class="tab-panel" id="quotesPanel" data-panel="quotes">
+          <div class="layout">
+
+            <!-- Left: form -->
+            <section class="panel form-panel">
+              <div class="panel-heading">
+                <h2>Generate Client Quote</h2>
+                <p>Fill in the details and download a branded PDF quote instantly.</p>
+              </div>
+
+              <form id="quoteForm" class="quote-form" novalidate>
+
+                <!-- Client name -->
+                <div class="form-group">
+                  <label for="qClientName">Client Name(s)</label>
+                  <input type="text" id="qClientName" placeholder="e.g. Prathima &amp; Rithwik" required />
+                </div>
+
+                <!-- Package -->
+                <div class="form-group">
+                  <label for="qPackage">Package</label>
+                  <select id="qPackage">
+                    <option value="Silver">Silver</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Platinum">Platinum</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                </div>
+
+                <!-- Price (shown always, pre-filled by package) -->
+                <div class="form-group">
+                  <label for="qPrice">Package Price ($)</label>
+                  <input type="number" id="qPrice" placeholder="e.g. 475" min="0" />
+                </div>
+
+                <!-- Events -->
+                <div class="form-group">
+                  <label>Events</label>
+                  <div id="quoteEventsList" class="quote-events-list"></div>
+                  <button type="button" id="addQuoteEvent" class="btn-add-event">+ Add Event</button>
+                </div>
+
+                <button type="submit" class="cta-btn quote-submit-btn" id="quoteSubmitBtn">
+                  <span id="quoteSubmitLabel">Download PDF Quote</span>
+                </button>
+
+              </form>
+            </section>
+
+            <!-- Right: preview card -->
+            <section class="panel board-panel">
+              <div class="panel-heading">
+                <h2>Quote Preview</h2>
+                <p>A live summary of your quote before downloading.</p>
+              </div>
+              <div id="quotePreviewCard" class="quote-preview-card">
+                <div class="qp-header">
+                  <div class="qp-logo">tales by DVS</div>
+                  <div id="qpClientName" class="qp-client">—</div>
+                </div>
+                <div class="qp-pkg-badge" id="qpPkgBadge">Silver</div>
+                <table class="qp-events-table" id="qpEventsTable">
+                  <thead>
+                    <tr><th>Date</th><th>Event</th><th>Team</th></tr>
+                  </thead>
+                  <tbody id="qpEventsBody">
+                    <tr><td colspan="3" style="text-align:center;opacity:.5">No events yet</td></tr>
+                  </tbody>
+                </table>
+                <div class="qp-price" id="qpPrice">$475</div>
+                <div class="qp-note">60-day guaranteed delivery from 2nd payment</div>
+              </div>
+            </section>
+
           </div>
         </section>
 

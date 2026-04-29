@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import io
 import json
 import mimetypes
 import os
@@ -21,6 +22,15 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.utils import ImageReader
+    REPORTLAB_OK = True
+except ImportError:
+    REPORTLAB_OK = False
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -890,6 +900,9 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/public/reviews":
             self.handle_public_reviews_post()
             return
+        if parsed.path == "/api/admin/generate-quote":
+            self.handle_generate_quote()
+            return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Route not found.")
 
@@ -1362,6 +1375,38 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
 
         self.send_json({"slides": slides or DEFAULT_SLIDES})
 
+    def handle_generate_quote(self) -> None:
+        user = get_user_from_session(self)
+        if user is None:
+            self.send_error_json(HTTPStatus.UNAUTHORIZED, "Login required.")
+            return
+        if not REPORTLAB_OK:
+            self.send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, "reportlab not installed on server.")
+            return
+        try:
+            payload = read_json_body(self)
+        except ValueError as e:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(e))
+            return
+
+        client_name = str(payload.get("clientName", "Valued Client")).strip() or "Valued Client"
+        events      = payload.get("events", [])
+        package     = str(payload.get("package", "Silver")).strip()
+        price       = str(payload.get("price", "")).strip()
+
+        pdf_bytes = generate_quote_pdf(client_name, events, package, price)
+
+        safe_name = client_name.replace(" ", "_").replace("&", "and")
+        filename  = f"Quote_{safe_name}.pdf"
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(pdf_bytes)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(pdf_bytes)
+
     def handle_slide_file(self, raw_name: str) -> None:
         slide_name = Path(unquote(raw_name)).name
         slide_path = (UPLOADS_DIR / slide_name).resolve()
@@ -1378,6 +1423,512 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(slide_bytes)
+
+
+def generate_quote_pdf(client_name: str, events: list, package: str, price: str) -> bytes:
+    """Generate a Tales by DVS quote PDF matching the brand design."""
+    buf = io.BytesIO()
+    W, H = A4  # 595.27 x 841.89 pts
+
+    c = rl_canvas.Canvas(buf, pagesize=A4)
+
+    # ── Brand colours ────────────────────────────────────────────────────────
+    NAVY   = HexColor('#0D1B2A')
+    DGOLD  = HexColor('#C9A84C')
+    LGOLD  = HexColor('#D4B96A')
+    WHITE  = HexColor('#FFFFFF')
+    CREAM  = HexColor('#E8E0D0')
+    LTBLUE = HexColor('#1A2E45')
+
+    def bg():
+        c.setFillColor(NAVY)
+        c.rect(0, 0, W, H, fill=1, stroke=0)
+
+    def gold_bar(x, y, w, h=18):
+        c.setFillColor(DGOLD)
+        c.rect(x, y, w, h, fill=1, stroke=0)
+
+    def hline(y, col=DGOLD, lw=0.6):
+        c.setStrokeColor(col)
+        c.setLineWidth(lw)
+        c.line(36, y, W - 36, y)
+
+    def txt(text, x, y, size=10, color=WHITE, font="Helvetica", align="left"):
+        c.setFillColor(color)
+        c.setFont(font, size)
+        if align == "center":
+            c.drawCentredString(x, y, text)
+        elif align == "right":
+            c.drawRightString(x, y, text)
+        else:
+            c.drawString(x, y, text)
+
+    def wrap_text(text, x, y, max_width, size=9, color=CREAM, font="Helvetica", line_h=14):
+        """Draw wrapped text, return final y position."""
+        c.setFillColor(color)
+        c.setFont(font, size)
+        words = text.split()
+        line = ""
+        for word in words:
+            test = (line + " " + word).strip()
+            if c.stringWidth(test, font, size) <= max_width:
+                line = test
+            else:
+                c.drawString(x, y, line)
+                y -= line_h
+                line = word
+        if line:
+            c.drawString(x, y, line)
+            y -= line_h
+        return y
+
+    # ── Decoration: gold bokeh dots (top-right corner) ───────────────────────
+    def bokeh(page=1):
+        import math, random
+        random.seed(page * 7)
+        for _ in range(28):
+            rx = random.uniform(W * 0.45, W - 10)
+            ry = random.uniform(H * 0.72, H - 10)
+            r  = random.uniform(1.5, 6)
+            op = random.uniform(0.15, 0.55)
+            c.setFillColor(HexColor('#C9A84C'))
+            c.setFillAlpha(op)
+            c.circle(rx, ry, r, fill=1, stroke=0)
+        c.setFillAlpha(1)
+
+    def bokeh_tl(page=2):
+        import random
+        random.seed(page * 13)
+        for _ in range(22):
+            rx = random.uniform(10, W * 0.55)
+            ry = random.uniform(H * 0.72, H - 10)
+            r  = random.uniform(1.5, 5)
+            op = random.uniform(0.12, 0.45)
+            c.setFillColor(HexColor('#C9A84C'))
+            c.setFillAlpha(op)
+            c.circle(rx, ry, r, fill=1, stroke=0)
+        c.setFillAlpha(1)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #  PAGE 1 — Cover + Events Table
+    # ═══════════════════════════════════════════════════════════════════════════
+    bg()
+    bokeh(1)
+
+    # Logo area
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-BoldOblique", 28)
+    c.drawCentredString(W / 2, H - 90, "tales by DVS")
+
+    # Thin gold rule below logo
+    hline(H - 100, DGOLD, 0.8)
+
+    # Greeting
+    txt(f"DEAR {client_name.upper()},", W / 2, H - 135, size=13, color=DGOLD,
+        font="Helvetica-Bold", align="center")
+
+    intro = ("THANK YOU FOR REACHING US. WE WOULD BE HONOURED TO BE A PART OF YOUR "
+             "CELEBRATIONS FOR FREEZING YOUR AUSPICIOUS MOMENTS. PLEASE FIND OUR "
+             "SERVICES, DELIVERABLES, AND CHARGES AS PER YOUR REQUIREMENTS, LISTED BELOW.")
+    c.setFillColor(CREAM)
+    c.setFont("Helvetica", 8.5)
+    # Centre-wrapped intro
+    lines_intro = []
+    words = intro.split()
+    line = ""
+    for w in words:
+        test = (line + " " + w).strip()
+        if c.stringWidth(test, "Helvetica", 8.5) <= W - 100:
+            line = test
+        else:
+            lines_intro.append(line)
+            line = w
+    if line:
+        lines_intro.append(line)
+    iy = H - 158
+    for ln in lines_intro:
+        c.drawCentredString(W / 2, iy, ln)
+        iy -= 13
+
+    # Events table
+    TAB_X   = 36
+    TAB_W   = W - 72
+    ROW_H   = 30
+    HDR_H   = 28
+    COL1_W  = 100   # DATE
+    COL3_W  = 90    # TEAM
+    COL2_W  = TAB_W - COL1_W - COL3_W
+
+    table_top = iy - 20
+
+    # Header row – gold background pills
+    c.setFillColor(DGOLD)
+    c.roundRect(TAB_X,            table_top - HDR_H, COL1_W - 6, HDR_H, 3, fill=1, stroke=0)
+    c.roundRect(TAB_X + COL1_W,   table_top - HDR_H, COL2_W - 6, HDR_H, 3, fill=1, stroke=0)
+    c.roundRect(TAB_X + COL1_W + COL2_W, table_top - HDR_H, COL3_W,    HDR_H, 3, fill=1, stroke=0)
+
+    c.setFillColor(NAVY)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(TAB_X + COL1_W / 2,           table_top - HDR_H + 8, "DATE")
+    c.drawCentredString(TAB_X + COL1_W + COL2_W / 2,  table_top - HDR_H + 8, "EVENT NAME")
+    c.drawCentredString(TAB_X + COL1_W + COL2_W + COL3_W / 2, table_top - HDR_H + 8, "TEAM")
+
+    # Event rows
+    ry = table_top - HDR_H - 6
+    for i, ev in enumerate(events):
+        row_bg = LTBLUE if i % 2 == 0 else NAVY
+        c.setFillColor(row_bg)
+        c.rect(TAB_X, ry - ROW_H, TAB_W, ROW_H, fill=1, stroke=0)
+
+        # Cell borders
+        c.setStrokeColor(DGOLD)
+        c.setLineWidth(0.4)
+        c.rect(TAB_X, ry - ROW_H, TAB_W, ROW_H, fill=0, stroke=1)
+
+        mid_y = ry - ROW_H + ROW_H / 2 - 4
+        ev_date = ev.get("date", "TBD")
+        ev_name = ev.get("name", "")
+        ev_team = ev.get("team", "")
+
+        c.setFillColor(CREAM)
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(TAB_X + COL1_W / 2,           mid_y, ev_date)
+        c.drawCentredString(TAB_X + COL1_W + COL2_W / 2,  mid_y, ev_name)
+        c.drawCentredString(TAB_X + COL1_W + COL2_W + COL3_W / 2, mid_y, ev_team)
+        ry -= ROW_H
+
+    # Footer note
+    hline(80, DGOLD, 0.5)
+    delivery_note = ("Guaranteed Deliveries — We're very committed to the deliveries with our talented "
+                     "post-production team to give you processed images and processed videos "
+                     "within 60 days from your payment date.")
+    c.setFillColor(CREAM)
+    c.setFont("Helvetica-Oblique", 8)
+    words = delivery_note.split()
+    line = ""
+    lines_dn = []
+    for w in words:
+        test = (line + " " + w).strip()
+        if c.stringWidth(test, "Helvetica-Oblique", 8) <= W - 72:
+            line = test
+        else:
+            lines_dn.append(line)
+            line = w
+    if line:
+        lines_dn.append(line)
+    fn_y = 68
+    for ln in lines_dn:
+        c.drawCentredString(W / 2, fn_y, ln)
+        fn_y -= 11
+
+    c.showPage()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #  PAGE 2 — Deliverables / Packages
+    # ═══════════════════════════════════════════════════════════════════════════
+    bg()
+    bokeh_tl(2)
+
+    # Logo top-right
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-BoldOblique", 14)
+    c.drawRightString(W - 36, H - 48, "tales by DVS")
+
+    txt("DELIVERABLES", W / 2, H - 85, size=20, color=WHITE,
+        font="Helvetica-Bold", align="center")
+    hline(H - 92, DGOLD, 0.8)
+
+    # Packages table
+    PACKAGES = {
+        "Silver": {
+            "price": price if package == "Silver" else "475",
+            "items": [
+                "Wedding Teaser — A beautifully crafted short teaser combining highlights from all events.",
+                "Wedding Trailer — A cinematic trailer covering all wedding events in one stunning film.",
+                "Full-Length complete videos for each event.",
+            ],
+        },
+        "Gold": {
+            "price": price if package == "Gold" else "550",
+            "items": [
+                "Includes everything in our Silver Package along with a Couple Pre-Wedding Photoshoot.",
+            ],
+        },
+        "Platinum": {
+            "price": price if package == "Platinum" else "650",
+            "items": [
+                "Includes everything in our Silver and Gold packages, along with:",
+                "Exclusive Individual Event Trailers",
+                "Highlight Reels for Social Media",
+                "Complimentary Couple Pre-Wedding Photoshoot",
+            ],
+        },
+    }
+
+    # Table header
+    PT_X   = 36
+    PT_W   = W - 72
+    PC1_W  = 85
+    PC2_W  = 70
+    PC3_W  = PT_W - PC1_W - PC2_W
+    HDR_Y  = H - 108
+
+    c.setStrokeColor(DGOLD)
+    c.setLineWidth(0.6)
+    c.rect(PT_X, HDR_Y - 22, PT_W, 22, fill=0, stroke=1)
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(LGOLD)
+    c.drawCentredString(PT_X + PC1_W / 2,           HDR_Y - 22 + 7, "Package")
+    c.drawCentredString(PT_X + PC1_W + PC2_W / 2,   HDR_Y - 22 + 7, "Price")
+    c.drawCentredString(PT_X + PC1_W + PC2_W + PC3_W / 2, HDR_Y - 22 + 7, "Deliverables")
+
+    pr_y = HDR_Y - 22
+    for pkg_name, pkg_data in PACKAGES.items():
+        # Estimate row height
+        item_lines = []
+        for itm in pkg_data["items"]:
+            words = itm.split()
+            line = ""
+            for w in words:
+                test = (line + " " + w).strip()
+                if c.stringWidth(test, "Helvetica", 8.5) <= PC3_W - 16:
+                    line = test
+                else:
+                    item_lines.append(line)
+                    line = w
+            if line:
+                item_lines.append(line)
+            item_lines.append("")  # blank between items
+
+        row_ht = max(50, len(item_lines) * 12 + 16)
+
+        is_selected = pkg_name == package
+        fill_col = HexColor('#162840') if not is_selected else HexColor('#1E3558')
+        c.setFillColor(fill_col)
+        c.rect(PT_X, pr_y - row_ht, PT_W, row_ht, fill=1, stroke=0)
+
+        c.setStrokeColor(DGOLD)
+        c.setLineWidth(0.5 if not is_selected else 1.2)
+        c.rect(PT_X, pr_y - row_ht, PT_W, row_ht, fill=0, stroke=1)
+
+        if is_selected:
+            # Gold left bar for selected package
+            c.setFillColor(DGOLD)
+            c.rect(PT_X, pr_y - row_ht, 4, row_ht, fill=1, stroke=0)
+
+        mid_row = pr_y - row_ht / 2
+
+        # Package name & price
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(LGOLD if not is_selected else DGOLD)
+        c.drawCentredString(PT_X + PC1_W / 2, mid_row - 5, pkg_name)
+        c.setFont("Helvetica-Bold", 13)
+        c.drawCentredString(PT_X + PC1_W + PC2_W / 2, mid_row - 5, f"${pkg_data['price']}")
+
+        # Deliverables text
+        c.setFont("Helvetica", 8.5)
+        c.setFillColor(CREAM)
+        item_y = pr_y - 14
+        for line in item_lines:
+            if line:
+                c.drawString(PT_X + PC1_W + PC2_W + 8, item_y, line)
+            item_y -= 12
+
+        # Vertical dividers
+        c.setStrokeColor(DGOLD)
+        c.setLineWidth(0.4)
+        c.line(PT_X + PC1_W, pr_y, PT_X + PC1_W, pr_y - row_ht)
+        c.line(PT_X + PC1_W + PC2_W, pr_y, PT_X + PC1_W + PC2_W, pr_y - row_ht)
+
+        pr_y -= row_ht
+
+    # Notes
+    notes_y = pr_y - 18
+    hline(notes_y + 8, DGOLD, 0.4)
+    notes = [
+        "• Photos of all events are uploaded on cloud and shared through a private link, accessible for ONE YEAR from your wedding.",
+        "• EDITED PICTURES — All raw pictures are shortlisted and processed with light and color corrections.",
+    ]
+    for note in notes:
+        c.setFillColor(CREAM)
+        c.setFont("Helvetica", 8)
+        words = note.split()
+        line = ""
+        for w in words:
+            test = (line + " " + w).strip()
+            if c.stringWidth(test, "Helvetica", 8) <= W - 80:
+                line = test
+            else:
+                c.drawCentredString(W / 2, notes_y, line)
+                notes_y -= 11
+                line = w
+        if line:
+            c.drawCentredString(W / 2, notes_y, line)
+            notes_y -= 11
+        notes_y -= 4
+
+    # Bottom quote
+    hline(72, DGOLD, 0.6)
+    txt('"WE DON\'T PROCESS ANY RAW DATA UNTIL 100% PAYMENT IS DONE"',
+        W / 2, 56, size=8, color=DGOLD, font="Helvetica-BoldOblique", align="center")
+
+    c.showPage()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #  PAGE 3 — Terms
+    # ═══════════════════════════════════════════════════════════════════════════
+    bg()
+    bokeh(3)
+
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-BoldOblique", 14)
+    c.drawRightString(W - 36, H - 48, "tales by DVS")
+
+    txt("TERMS", W / 2, H - 90, size=22, color=WHITE, font="Helvetica-Bold", align="center")
+    hline(H - 98, DGOLD, 0.8)
+
+    terms = [
+        ('1. "SCHEDULING"',
+         'The client should provide a schedule 30 days before the wedding date which has the dates and timing '
+         'of events, locations, start and end timings. All the events will be planned and will happen according '
+         'to the information provided by the client. NO changes can be done at the "last minute". Team information '
+         'will be available in the group we share with you before the event.'),
+        ('2. TRAVEL EXPENSES',
+         'You shall provide travel and accommodation for all outstation events. If accommodation is not provided '
+         'we will head to book one and charges will be added to the final bill after the wedding.'),
+        ('3. ADVANCE PAYMENTS',
+         'You shall clear 50% of the whole amount immediately to block the dates, 50% on the wedding day. '
+         'Once the advance is paid and the dates are blocked, it cannot be refunded. Guaranteed delivery from '
+         '60 days of your second payment, else we offer a free couple shoot.'),
+        ('4. CHANGE OF PLANS',
+         'Any change of plan and postponement of any event will be accommodated based on our availability on '
+         'the new dates (ONLY WITH 3 MONTHS PRIOR NOTIFICATION). If not informed the day will be considered '
+         'an event and the advance will not be refunded.'),
+        ('5. HARD DISK / PAYMENTS / BACKUP',
+         'DATA is provided over the hard disk to the client only when 100% of the payment is done. RAW DATA '
+         'WILL BE GIVEN ONLY OVER HARD DRIVE AFTER THE PAYMENT. We do not keep a backup of any wedding after '
+         '3 months (without payment) 1 year (after payment). We\'re not responsible for the data after the due date.'),
+        ('6. TEAM / RESPECT / TIMING',
+         'All our team is well-behaved and well-mannered, we expect the same in case of any events or situations. '
+         'Supporting them in an event will result in good output. Please let them have their space for a while to '
+         'have food during long-day events. We respect your time and will be available on time and we expect the '
+         'same from the clients. Mentioning event time one hour before the event is fine but 2-3 hours prior will '
+         'be considered as shooting time, time starts from the time mentioned on the schedule by the client.'),
+    ]
+
+    ty = H - 120
+    for heading, body in terms:
+        c.setFont("Helvetica-Bold", 9)
+        c.setFillColor(LGOLD)
+        c.drawString(40, ty, heading)
+        ty -= 13
+        c.setFont("Helvetica", 8.5)
+        c.setFillColor(CREAM)
+        words = body.split()
+        line = ""
+        for w in words:
+            test = (line + " " + w).strip()
+            if c.stringWidth(test, "Helvetica", 8.5) <= W - 82:
+                line = test
+            else:
+                c.drawString(40, ty, line)
+                ty -= 12
+                line = w
+        if line:
+            c.drawString(40, ty, line)
+            ty -= 12
+        ty -= 12
+        if ty < 60:
+            break
+
+    c.showPage()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #  PAGE 4 — Conditions
+    # ═══════════════════════════════════════════════════════════════════════════
+    bg()
+    bokeh_tl(4)
+
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-BoldOblique", 14)
+    c.drawRightString(W - 36, H - 48, "tales by DVS")
+
+    txt("CONDITIONS", W / 2, H - 90, size=22, color=WHITE, font="Helvetica-Bold", align="center")
+    hline(H - 98, DGOLD, 0.8)
+
+    conditions = [
+        "WE DON'T PROVIDE SERVICES FOR ANY EVENT THAT IS NOT MENTIONED IN THE QUOTE.",
+        "Processed images and videos will be delivered within 60 days from the 2nd payment date.",
+        "FOOD COVERAGE will be done only if mentioned as we have limited sources for the wedding; prior notification is needed to cover the food.",
+        "WE DON'T PROVIDE \"BANNERS\" \"PLAY CARDS\" \"FLEXIS\" & \"INVITATIONS\".",
+        "We provide raw data on SmugMug only AFTER 10 days of the wedding date.",
+        "HARD DRIVE — 2 × 2TB HARD DRIVES (SSD) should be provided by the Client before the first event of the wedding rituals. We provide all the raw data and processed data over the hard drive provided by the client.",
+    ]
+
+    cy = H - 122
+    for cond in conditions:
+        c.setFillColor(DGOLD)
+        c.circle(46, cy + 3, 2.5, fill=1, stroke=0)
+        c.setFont("Helvetica", 8.8)
+        c.setFillColor(CREAM)
+        words = cond.split()
+        line = ""
+        first = True
+        for w in words:
+            test = (line + " " + w).strip()
+            max_w = W - 100 if first else W - 82
+            if c.stringWidth(test, "Helvetica", 8.8) <= max_w:
+                line = test
+            else:
+                c.drawString(54 if first else 54, cy, line)
+                cy -= 13
+                line = w
+                first = False
+        if line:
+            c.drawString(54, cy, line)
+            cy -= 13
+        cy -= 10
+
+    c.showPage()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #  PAGE 5 — Thank You
+    # ═══════════════════════════════════════════════════════════════════════════
+    bg()
+    bokeh(5)
+
+    txt("ITS YOUR BIG DAY!", W / 2, H / 2 + 80, size=22, color=DGOLD,
+        font="Helvetica-Bold", align="center")
+    txt("MAKE IT MORE MEMORABLE WITH US!", W / 2, H / 2 + 52, size=18, color=DGOLD,
+        font="Helvetica-Bold", align="center")
+
+    hline(H / 2 + 40, DGOLD, 0.6)
+
+    c.setFillColor(DGOLD)
+    c.setFont("Helvetica-BoldOblique", 30)
+    c.drawCentredString(W / 2, H / 2 - 5, "tales by DVS")
+
+    hline(H / 2 - 18, DGOLD, 0.6)
+
+    txt("THANK YOU!", W / 2, H / 2 - 50, size=24, color=WHITE,
+        font="Helvetica-Bold", align="center")
+
+    c.setFillColor(LGOLD)
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(W / 2, H / 2 - 90, "Client Galleries")
+    hline(H / 2 - 94, LGOLD, 0.6)
+
+    # Quote meta footer
+    hline(46, DGOLD, 0.4)
+    today = datetime.now().strftime("%B %d, %Y")
+    txt(f"Quote prepared for {client_name}  •  {today}  •  Tales by DVS",
+        W / 2, 32, size=8, color=CREAM, font="Helvetica", align="center")
+
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf.read()
 
 
 def main() -> None:

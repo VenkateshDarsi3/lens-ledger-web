@@ -3259,3 +3259,103 @@ textarea { resize: vertical; }
   text-align: center;
   border-top: 1px solid rgba(118,78,53,0.08);
 }
+
+/* ── Quote Generator ────────────────────────────────────────── */
+.quote-form { display: flex; flex-direction: column; gap: 18px; }
+
+.quote-event-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.quote-event-row input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+.quote-event-row input:focus { border-bottom-color: var(--gold); }
+.qe-remove {
+  background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-size: 0.8rem; padding: 4px 6px;
+  border-radius: 4px; transition: color 0.2s;
+  flex-shrink: 0;
+}
+.qe-remove:hover { color: #e05; }
+
+.btn-add-event {
+  background: none;
+  border: 1px dashed var(--gold);
+  color: var(--gold);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+.btn-add-event:hover { background: rgba(201,168,76,0.08); }
+
+.quote-submit-btn {
+  width: 100%; text-align: center;
+  margin-top: 8px;
+  padding: 14px;
+  font-size: 1rem;
+}
+
+/* Preview card */
+.quote-preview-card {
+  background: #0D1B2A;
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 12px;
+  padding: 24px;
+  color: #E8E0D0;
+  font-family: var(--font-body);
+}
+.qp-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
+.qp-logo {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: #C9A84C;
+  margin-bottom: 6px;
+}
+.qp-client { font-size: 0.95rem; color: #fff; letter-spacing: 0.06em; }
+
+.qp-pkg-badge {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 auto 16px;
+  text-align: center;
+  background: rgba(201,168,76,0.15);
+  color: #C9A84C;
+  border: 1px solid #C9A84C;
+}
+.qp-pkg-gold     { border-color: #D4B96A; color: #D4B96A; }
+.qp-pkg-platinum { border-color: #E0D0FF; color: #E0D0FF; background: rgba(160,120,255,0.1); }
+
+.qp-events-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 16px; }
+.qp-events-table th { color: #C9A84C; text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(201,168,76,0.3); }
+.qp-events-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #E8E0D0; }
+
+.qp-price {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #C9A84C;
+  margin: 12px 0 6px;
+}
+.qp-note { text-align: center; font-size: 0.75rem; color: #8a7a6a; font-style: italic; }
