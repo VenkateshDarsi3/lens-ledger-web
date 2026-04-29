@@ -1934,8 +1934,8 @@ textarea { resize: vertical; }
 
 /* ── Custom Cursor ───────────────────────────────────────── */
 @media (pointer: fine) {
-  body { cursor: none; }
-  a, button { cursor: none; }
+  #publicShell { cursor: none; }
+  #publicShell a, #publicShell button { cursor: none; }
 }
 
 .cursor {
