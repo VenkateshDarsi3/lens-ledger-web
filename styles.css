@@ -3093,15 +3093,32 @@ textarea { resize: vertical; }
 }
 
 /* ── Team Schedule Tab ──────────────────────────────────────── */
-.team-schedule-list { margin-top: 8px; }
+.ts-full-layout {
+  padding: 28px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ts-header {
+  margin-bottom: 24px;
+}
+.ts-header h2 {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ts-header p { color: var(--muted); font-size: 0.92rem; margin: 0; }
+
+.team-schedule-list { margin-top: 0; }
 
 .ts-table-wrap {
   border-radius: var(--r-md);
   overflow: hidden;
   border: 1px solid rgba(118,78,53,0.13);
-  box-shadow: 0 4px 24px rgba(60,30,10,0.07);
-  background: rgba(255,255,255,0.82);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 32px rgba(60,30,10,0.09);
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(14px);
 }
 
 .ts-table {
