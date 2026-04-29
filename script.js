@@ -3634,27 +3634,18 @@ function renderTeamSchedule() {
   const container = document.getElementById("teamScheduleList");
   if (!container) return;
 
-  // Build a map: memberName -> [{ clientName, eventLabel, date, amount, paid }]
-  const buckets = new Map();
-
-  const addEntry = (name, entry) => {
-    const key = name.trim().toLowerCase();
-    if (!key) return;
-    const displayName = name.trim();
-    if (!buckets.has(key)) buckets.set(key, { name: displayName, events: [] });
-    buckets.get(key).events.push(entry);
-  };
+  // Collect all assignments as flat rows
+  const rows = [];
 
   state.leads.forEach((lead) => {
     if (lead.source === "wedding-plan") return;
     (lead.teamAssignments || []).forEach((item) => {
       if (!item.name) return;
-      addEntry(item.name, {
+      rows.push({
+        member: item.name.trim(),
         client: lead.clientName || "Unknown",
-        label: lead.eventType || "Event",
+        event: lead.eventType || "Event",
         date: lead.eventDate || "",
-        amount: Number(item.amount || 0),
-        paid: item.paymentStatus === "Completed" || !!item.paid,
       });
     });
   });
@@ -3663,45 +3654,60 @@ function renderTeamSchedule() {
     (plan.events || []).forEach((event) => {
       (event.teamAssignments || []).forEach((item) => {
         if (!item.name) return;
-        addEntry(item.name, {
+        rows.push({
+          member: item.name.trim(),
           client: plan.clientName || "Unknown",
-          label: event.eventName || "Wedding Event",
+          event: event.eventName || "Wedding Event",
           date: event.eventDate || plan.weddingDate || "",
-          amount: Number(item.amount || 0),
-          paid: item.paymentStatus === "Completed" || !!item.paid,
         });
       });
     });
   });
 
-  if (!buckets.size) {
+  if (!rows.length) {
     container.innerHTML = `<div class="empty-state"><h3>No team assignments yet</h3><p>Assign team members to events to see them here.</p></div>`;
     return;
   }
 
-  const members = [...buckets.values()].sort((a, b) => a.name.localeCompare(b.name));
+  // Sort by date then member name
+  rows.sort((a, b) => (a.date || "").localeCompare(b.date || "") || a.member.localeCompare(b.member));
 
-  container.innerHTML = members.map((member) => {
-    const sorted = [...member.events].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-    const eventRows = sorted.map((ev) => `
-      <div class="team-schedule-event">
-        <div class="team-schedule-event-info">
-          <strong>${escapeHtml(ev.client)}</strong>
-          <span>${escapeHtml(ev.label)}${ev.date ? " · " + formatDate(ev.date) : ""}</span>
-        </div>
-      </div>
-    `).join("");
+  // Get unique member names for avatar colours
+  const members = [...new Set(rows.map(r => r.member))].sort();
+  const memberColors = ["#b85c34","#6b7c5e","#8b6b4e","#5a7a8a","#a0785a","#7a6b8a","#5a8a6b","#8a5a6b"];
+  const colorMap = Object.fromEntries(members.map((m, i) => [m, memberColors[i % memberColors.length]]));
 
-    return `
-      <div class="team-schedule-member">
-        <div class="team-schedule-member-header">
-          <strong>${escapeHtml(member.name)}</strong>
-          <span>${sorted.length} event${sorted.length !== 1 ? "s" : ""}</span>
-        </div>
-        <div class="team-schedule-events">${eventRows}</div>
-      </div>
-    `;
-  }).join("");
+  const initials = (name) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  container.innerHTML = `
+    <div class="ts-table-wrap">
+      <table class="ts-table">
+        <thead>
+          <tr>
+            <th>Team Member</th>
+            <th>Client</th>
+            <th>Event</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row, i) => `
+            <tr class="ts-row" style="--row-i:${i}">
+              <td>
+                <div class="ts-member-cell">
+                  <span class="ts-avatar" style="background:${colorMap[row.member]}22;color:${colorMap[row.member]};border-color:${colorMap[row.member]}44">${initials(row.member)}</span>
+                  <strong>${escapeHtml(row.member)}</strong>
+                </div>
+              </td>
+              <td>${escapeHtml(row.client)}</td>
+              <td><span class="ts-event-badge">${escapeHtml(row.event)}</span></td>
+              <td class="ts-date">${row.date ? formatDate(row.date) : "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function buildTeamDueByMember() {
