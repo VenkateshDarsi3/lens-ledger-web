@@ -510,6 +510,7 @@
         <button class="tab-button" type="button" data-tab="calendar">Calendar</button>
         <button class="tab-button" type="button" data-tab="editor">Editor</button>
         <button class="tab-button" type="button" data-tab="overview">Overview</button>
+        <button class="tab-button" type="button" data-tab="team-schedule">Team</button>
         <button class="tab-button" type="button" data-tab="reviews">Reviews</button>
       </nav>
 
@@ -653,6 +654,23 @@
         </section>
 
         <!-- ── ADMIN REVIEWS PANEL ── -->
+        <section class="tab-panel" id="teamSchedulePanel" data-panel="team-schedule">
+          <div class="layout">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Team Schedule</h2>
+                <p>See which team member is assigned to which event.</p>
+              </div>
+              <div id="teamScheduleList" class="team-schedule-list">
+                <div class="empty-state">
+                  <h3>No team assignments yet</h3>
+                  <p>Assign team members to events to see them here.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
         <section class="tab-panel" id="reviewsPanel" data-panel="reviews">
           <div class="layout">
             <section class="panel form-panel">

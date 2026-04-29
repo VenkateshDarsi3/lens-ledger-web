@@ -237,7 +237,10 @@ const leadUpdateUiState = {
 };
 
 tabButtons.forEach((button) => {
-  button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+  button.addEventListener("click", () => {
+    setActiveTab(button.dataset.tab);
+    if (button.dataset.tab === "team-schedule") renderTeamSchedule();
+  });
 });
 
 leadForm.addEventListener("submit", handleLeadSubmit);
@@ -3596,6 +3599,84 @@ function renderTeamDueBreakdown() {
       <strong class="overview-team-total">${formatCurrency(member.total)}</strong>
     </div>
   `).join("");
+}
+
+function renderTeamSchedule() {
+  const container = document.getElementById("teamScheduleList");
+  if (!container) return;
+
+  // Build a map: memberName -> [{ clientName, eventLabel, date, amount, paid }]
+  const buckets = new Map();
+
+  const addEntry = (name, entry) => {
+    const key = name.trim().toLowerCase();
+    if (!key) return;
+    const displayName = name.trim();
+    if (!buckets.has(key)) buckets.set(key, { name: displayName, events: [] });
+    buckets.get(key).events.push(entry);
+  };
+
+  state.leads.forEach((lead) => {
+    if (lead.source === "wedding-plan") return;
+    (lead.teamAssignments || []).forEach((item) => {
+      if (!item.name) return;
+      addEntry(item.name, {
+        client: lead.clientName || "Unknown",
+        label: lead.eventType || "Event",
+        date: lead.eventDate || "",
+        amount: Number(item.amount || 0),
+        paid: item.paymentStatus === "Completed" || !!item.paid,
+      });
+    });
+  });
+
+  state.weddingPlans.forEach((plan) => {
+    (plan.events || []).forEach((event) => {
+      (event.teamAssignments || []).forEach((item) => {
+        if (!item.name) return;
+        addEntry(item.name, {
+          client: plan.clientName || "Unknown",
+          label: event.eventName || "Wedding Event",
+          date: event.eventDate || plan.weddingDate || "",
+          amount: Number(item.amount || 0),
+          paid: item.paymentStatus === "Completed" || !!item.paid,
+        });
+      });
+    });
+  });
+
+  if (!buckets.size) {
+    container.innerHTML = `<div class="empty-state"><h3>No team assignments yet</h3><p>Assign team members to events to see them here.</p></div>`;
+    return;
+  }
+
+  const members = [...buckets.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  container.innerHTML = members.map((member) => {
+    const sorted = [...member.events].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const eventRows = sorted.map((ev) => `
+      <div class="team-schedule-event">
+        <div class="team-schedule-event-info">
+          <strong>${escapeHtml(ev.client)}</strong>
+          <span>${escapeHtml(ev.label)}${ev.date ? " · " + formatDate(ev.date) : ""}</span>
+        </div>
+        <div class="team-schedule-event-meta">
+          ${ev.amount > 0 ? `<span class="team-schedule-event-amount">${formatCurrency(ev.amount)}</span>` : ""}
+          <span class="team-schedule-event-status ${ev.paid ? "paid" : "pending"}">${ev.paid ? "Paid" : "Pending"}</span>
+        </div>
+      </div>
+    `).join("");
+
+    return `
+      <div class="team-schedule-member">
+        <div class="team-schedule-member-header">
+          <strong>${escapeHtml(member.name)}</strong>
+          <span>${sorted.length} event${sorted.length !== 1 ? "s" : ""}</span>
+        </div>
+        <div class="team-schedule-events">${eventRows}</div>
+      </div>
+    `;
+  }).join("");
 }
 
 function buildTeamDueByMember() {
