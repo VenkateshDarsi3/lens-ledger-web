@@ -49,7 +49,7 @@ def send_message(chat_id: str, text: str) -> None:
     })
 
 
-def get_updates(offset: int | None, timeout: int = 30) -> dict:
+def get_updates(offset, timeout=30):
     params: dict = {"timeout": timeout, "allowed_updates": ["message"]}
     if offset is not None:
         params["offset"] = offset
@@ -72,7 +72,7 @@ def load_state() -> dict:
         return {}
 
 
-def all_events(state: dict) -> list[dict]:
+def all_events(state):
     """Return every scheduled event from leads + weddingPlans, sorted by date."""
     events = []
 
@@ -191,7 +191,7 @@ def handle_message(message: dict) -> None:
 
 def main() -> None:
     print(f"[DVS Bot] Starting — polling Telegram...")
-    offset: int | None = None
+    offset = None
 
     while True:
         try:
