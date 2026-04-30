@@ -1,0 +1,13 @@
+[Unit]
+Description=Tales by DVS Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/lensledger/lens-ledger-web
+ExecStart=/usr/bin/python3 /var/www/lensledger/lens-ledger-web/telegram_bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

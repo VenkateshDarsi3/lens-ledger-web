@@ -380,6 +380,43 @@ def build_public_enquiry_sms(inquiry: dict) -> str:
     return f"{summary}\n" + "\n".join(details)
 
 
+def telegram_configured() -> bool:
+    return bool(os.getenv("TELEGRAM_BOT_TOKEN", "").strip()) and bool(os.getenv("TELEGRAM_CHAT_ID", "").strip())
+
+
+def send_telegram_message(text: str) -> None:
+    token   = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return
+    payload = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "HTML"}).encode()
+    req = Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(req, timeout=10) as _:
+        pass
+
+
+def build_inquiry_telegram_message(inquiry: dict) -> str:
+    name       = clean_text(inquiry.get("clientName"), 60) or "Unknown"
+    event_type = clean_text(inquiry.get("eventType"), 40) or "Event"
+    event_date = format_display_date(inquiry.get("eventDate", ""))
+    contact    = clean_text(inquiry.get("contact"), 80)
+    location   = clean_text(inquiry.get("location"), 80)
+    lines = [
+        "📩 <b>New Inquiry — Tales by DVS</b>",
+        f"👤 <b>{name}</b> — {event_type}",
+        f"📅 {event_date}",
+    ]
+    if contact:
+        lines.append(f"📞 {contact}")
+    if location:
+        lines.append(f"📍 {location}")
+    return "\n".join(lines)
+
+
 def password_hash(password: str, salt: bytes | None = None) -> str:
     salt_bytes = salt or secrets.token_bytes(16)
     derived = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, 120_000)
@@ -1242,6 +1279,12 @@ class LensLedgerHandler(SimpleHTTPRequestHandler):
                 send_sms_message(build_public_enquiry_sms(inquiry))
         except Exception as error:
             print(f"Enquiry SMS failed: {error}")
+
+        try:
+            if telegram_configured():
+                send_telegram_message(build_inquiry_telegram_message(inquiry))
+        except Exception as error:
+            print(f"Enquiry Telegram alert failed: {error}")
 
         self.send_json(
             {"ok": True, "message": "Thank you. Your enquiry has been sent."},
