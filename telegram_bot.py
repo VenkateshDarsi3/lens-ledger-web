@@ -23,8 +23,8 @@ import urllib.parse
 from datetime import date, datetime, timedelta
 
 # ── CONFIG — fill these in ────────────────────────────────────────────────────
-BOT_TOKEN     = os.getenv("TELEGRAM_BOT_TOKEN", "")
-OWNER_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+BOT_TOKEN     = os.getenv("TELEGRAM_BOT_TOKEN", "8502969409:AAFf4LbuXRqwp4V4WST03kNeX8CXXuABuZ0")
+OWNER_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "6952178626")
 DB_PATH       = "/var/www/lensledger/lens-ledger-web/data/lens_ledger.sqlite3"
 # ─────────────────────────────────────────────────────────────────────────────
 
