@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
+EnvironmentFile=/etc/telegram_bot.env
 WorkingDirectory=/var/www/lensledger/lens-ledger-web
 ExecStart=/usr/bin/python3 /var/www/lensledger/lens-ledger-web/telegram_bot.py
 Restart=always
