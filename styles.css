@@ -3359,3 +3359,81 @@ textarea { resize: vertical; }
   margin: 12px 0 6px;
 }
 .qp-note { text-align: center; font-size: 0.75rem; color: #8a7a6a; font-style: italic; }
+
+/* ═══════════════════════════════════════════════════════
+   PUBLIC.JS — Animation support styles
+═══════════════════════════════════════════════════════ */
+
+/* Cursor — hide on touch devices */
+@media (hover: none) {
+  .cursor, .cursor-dot { display: none !important; }
+}
+
+/* Reveal-child base state */
+.reveal-child {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.reveal-child.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Section in-view glow accent */
+.public-section.in-view::after {
+  opacity: 1;
+}
+.public-section::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 80px rgba(201,145,58,0.03);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  pointer-events: none;
+}
+
+/* 3D card glow on hover */
+.card-3d {
+  transition: box-shadow 0.4s ease;
+}
+.card-3d:hover {
+  box-shadow: 0 40px 100px rgba(24,12,6,0.5), 0 0 0 1px rgba(201,145,58,0.15);
+}
+
+/* Process step 3D tilt */
+.process-step {
+  transition: box-shadow 0.4s ease;
+  will-change: transform;
+}
+.process-step:hover {
+  box-shadow: 0 30px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(201,145,58,0.12);
+}
+
+/* Magnetic button — transition for JS-driven transform */
+.btn-magnetic, .nav-cta, .primary-button, .ghost-button {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  will-change: transform;
+}
+
+/* Hero line entrance base */
+.hero-line {
+  display: block;
+  will-change: opacity, transform;
+}
+
+/* Subtle scroll indicator pulse */
+.hero-scroll-hint {
+  will-change: transform;
+}
+
+/* Enquiry form floating label */
+.public-enquiry-form label {
+  position: relative;
+  transition: color 0.2s ease;
+}
+.public-enquiry-form label.has-value {
+  color: var(--gold);
+}
