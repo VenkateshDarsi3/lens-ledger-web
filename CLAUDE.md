@@ -179,6 +179,18 @@ data/
 
 ---
 
+## Telegram Bot
+
+- **Bot username:** @TalesbydVS
+- **Service:** `telegram_bot.service` (systemd, `Restart=always`)
+- **Token storage:** `/etc/telegram_bot.env` — never commit this file; it is NOT in git
+- **Commands:** `/today` (today's events + team), `/week` (next 7 days), `/help`
+- **Security:** bot only responds to `OWNER_CHAT_ID` (Venky's Telegram user ID, hardcoded default `6952178626`)
+- **Deploy:** token is set via `EnvironmentFile=/etc/telegram_bot.env` in the service file
+- **IMPORTANT:** Never hardcode the token in `telegram_bot.py` — the public GitHub repo will trigger automatic token revocation by Telegram
+
+---
+
 ## Business Context
 
 - **Owner:** Venky (darsivenkatesh.darsi@gmail.com)
