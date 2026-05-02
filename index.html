@@ -10,6 +10,21 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+
+    <!-- ═══ CINEMATIC PRELOADER ═══ -->
+    <div id="sitePreloader" class="site-preloader" aria-hidden="true">
+      <div class="preloader-bg"></div>
+      <div class="preloader-inner">
+        <img src="assets/logo-white.png" alt="Tales by DVS" class="preloader-logo" />
+        <p class="preloader-tagline">Wedding Films &amp; Photography</p>
+        <div class="preloader-bar-wrap">
+          <div class="preloader-bar-fill"></div>
+        </div>
+      </div>
+      <div class="preloader-vignette"></div>
+      <div class="preloader-sweep"></div>
+    </div>
+
     <div class="public-shell" id="publicShell">
 
       <!-- Custom Cursor -->
@@ -35,6 +50,7 @@
         <div class="nav-inner">
           <img class="nav-logo" src="assets/logo-white.png" alt="Tales by DVS" />
           <div class="nav-links">
+            <a href="#about" class="nav-link">About</a>
             <a href="#work" class="nav-link">Portfolio</a>
             <a href="#services" class="nav-link">Services</a>
             <a href="#process" class="nav-link">Process</a>
@@ -42,8 +58,32 @@
             <a href="#enquiry" class="nav-link">Contact</a>
           </div>
           <a href="#enquiry" class="nav-cta">Book Now</a>
+          <!-- Hamburger — mobile only -->
+          <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
         </div>
       </nav>
+
+      <!-- Mobile Menu Overlay -->
+      <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+        <div class="mobile-menu-bg"></div>
+        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+          <span></span><span></span>
+        </button>
+        <nav class="mobile-menu-nav">
+          <img class="mobile-menu-logo" src="assets/logo-white.png" alt="Tales by DVS" />
+          <div class="mobile-menu-links">
+            <a href="#about"    class="mobile-link">About</a>
+            <a href="#work"     class="mobile-link">Portfolio</a>
+            <a href="#services" class="mobile-link">Services</a>
+            <a href="#process"  class="mobile-link">Process</a>
+            <a href="#reviews"  class="mobile-link">Reviews</a>
+            <a href="#enquiry"  class="mobile-link">Contact</a>
+          </div>
+          <a href="#enquiry" class="primary-button mobile-menu-cta">Book Now</a>
+        </nav>
+      </div>
 
       <main class="public-main">
 
@@ -99,6 +139,57 @@
               <span class="stat-num" data-target="10">0</span><span class="stat-plus">+</span>
               <p>Years Experience</p>
             </div>
+          </div>
+        </section>
+
+        <!-- ABOUT -->
+        <section class="public-section about-section reveal-section" id="about">
+          <div class="about-inner">
+
+            <div class="about-text">
+              <p class="public-kicker">Our Story</p>
+              <h2 class="about-heading">Born from a love<br><em>of real moments</em></h2>
+              <p class="about-lead">Tales by DVS is a wedding photography &amp; videography studio built on one belief — your story deserves to be told with artistry, honesty, and heart.</p>
+              <p class="about-body">A visual storytelling studio with over a decade of experience capturing South Asian weddings, cultural celebrations, and milestone moments across Texas and beyond. Every frame is intentional. Every film is cinematic. Every memory is yours forever.</p>
+              <div class="about-pillars">
+                <div class="about-pillar reveal-child">
+                  <div class="pillar-icon">🎞</div>
+                  <strong>Cinematic Style</strong>
+                  <p>Film-inspired color grading and storytelling that moves you long after the day is done.</p>
+                </div>
+                <div class="about-pillar reveal-child">
+                  <div class="pillar-icon">🤍</div>
+                  <strong>Candid First</strong>
+                  <p>We blend in so you never feel like you're performing for a camera.</p>
+                </div>
+                <div class="about-pillar reveal-child">
+                  <div class="pillar-icon">✨</div>
+                  <strong>Cultural Fluency</strong>
+                  <p>Deep experience with South Asian traditions and the moments that matter most.</p>
+                </div>
+              </div>
+              <a href="#enquiry" class="primary-button btn-magnetic about-cta">Work With Us</a>
+            </div>
+
+            <div class="about-visual">
+              <div class="about-float-wrap">
+                <div class="about-card-3d" id="aboutCard3D">
+                  <div class="about-card-shine"></div>
+                  <img src="assets/logo-white.png" alt="Tales by DVS" class="about-card-logo" />
+                  <div class="about-card-divider"></div>
+                  <div class="about-card-stats">
+                    <div class="about-cs"><span>10+</span><p>Years of Experience</p></div>
+                    <div class="about-cs"><span>1000+</span><p>Events Captured</p></div>
+                    <div class="about-cs"><span>5 ★</span><p>Average Rating</p></div>
+                  </div>
+                  <p class="about-card-quote">"Every wedding is a universe.<br>We help you revisit it."</p>
+                  <div class="about-card-glow"></div>
+                </div>
+                <div class="about-float-ring about-ring-1"></div>
+                <div class="about-float-ring about-ring-2"></div>
+              </div>
+            </div>
+
           </div>
         </section>
 
