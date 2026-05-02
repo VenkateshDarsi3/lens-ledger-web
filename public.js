@@ -23,7 +23,7 @@
     setTimeout(function () {
       if (pre.parentNode) pre.parentNode.removeChild(pre);
     }, 950);
-  }, 2900);
+  }, 1500);
 })();
 
 (function () {
