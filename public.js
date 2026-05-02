@@ -58,46 +58,49 @@
       "rgba(212,175,55,", "rgba(255,220,100,", "rgba(200,160,40,",
       "rgba(255,240,160,", "rgba(180,130,60,",
     ];
-    const COUNT = 80;
+    const COUNT = 35;
     const particles = Array.from({ length: COUNT }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      r: Math.random() * 2.5 + 0.5,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3 - 0.08,
-      alpha: Math.random() * 0.55 + 0.2,
+      r: Math.random() * 2 + 0.8,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25 - 0.06,
+      alpha: Math.random() * 0.45 + 0.15,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       pulse: Math.random() * Math.PI * 2,
-      pulseSpeed: 0.008 + Math.random() * 0.01,
-      glow: Math.random() * 10 + 5,
+      pulseSpeed: 0.006 + Math.random() * 0.008,
     }));
 
-    let pmx = 0, pmy = 0;
+    let pmx = 0, pmy = 0, frameSkip = 0;
     window.addEventListener("mousemove", (e) => { pmx = e.clientX; pmy = e.clientY; }, { passive: true });
 
     function draw() {
+      requestAnimationFrame(draw);
+      /* Render every other frame to halve GPU load */
+      frameSkip ^= 1; if (frameSkip) return;
+
       ctx.clearRect(0, 0, W, H);
       particles.forEach((p) => {
         p.pulse += p.pulseSpeed;
         const a = p.alpha * (0.7 + 0.3 * Math.sin(p.pulse));
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * p.glow);
-        g.addColorStop(0, p.color + a + ")");
-        g.addColorStop(0.4, p.color + (a * 0.3) + ")");
-        g.addColorStop(1, p.color + "0)");
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.glow, 0, Math.PI * 2);
-        ctx.fillStyle = g; ctx.fill();
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + Math.min(a + 0.3, 1) + ")"; ctx.fill();
+        /* Simple filled circle — no radial gradient (much cheaper) */
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + 2, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + (a * 0.35) + ")";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + Math.min(a + 0.25, 1) + ")";
+        ctx.fill();
 
         const dx = pmx - p.x, dy = pmy - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 160) { const pull = (160 - dist) / 160 * 0.007; p.vx += dx * pull; p.vy += dy * pull; }
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < 160 * 160) { const pull = (160 - Math.sqrt(dist2)) / 160 * 0.006; p.vx += dx * pull; p.vy += dy * pull; }
         p.vx *= 0.985; p.vy *= 0.985;
         p.x += p.vx; p.y += p.vy;
         if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
         if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
       });
-      requestAnimationFrame(draw);
     }
     draw();
   })();
@@ -108,7 +111,7 @@
   const cursor    = document.getElementById("cursor");
   const cursorDot = document.getElementById("cursorDot");
 
-  const TRAIL = 12;
+  const TRAIL = 6;
   const trailDots = Array.from({ length: TRAIL }, (_, i) => {
     const d = document.createElement("div");
     const sz = 8 - i * 0.45;
