@@ -1073,6 +1073,7 @@ async function handlePublicEnquirySubmit(event) {
   const payload = {
     clientName: String(formData.get("clientName") || "").trim(),
     contact: String(formData.get("contact") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
     eventType: String(formData.get("eventType") || "").trim(),
     customEventType: String(formData.get("customEventType") || "").trim(),
     eventDate: String(formData.get("eventDate") || "").trim(),
@@ -1084,7 +1085,7 @@ async function handlePublicEnquirySubmit(event) {
   };
 
   if (!payload.clientName || !payload.contact) {
-    showPublicEnquiryMessage("Please add your name and phone/email.", "error");
+    showPublicEnquiryMessage("Please add your name and contact number.", "error");
     return;
   }
 
@@ -1313,7 +1314,8 @@ function renderInquiries() {
     badge.classList.add("status-follow-up");
     title.textContent = `${inquiry.clientName || "Client"} - ${inquiry.eventType || "Event"}`;
     meta.innerHTML = [
-      createMetaItem("Contact", escapeHtml(inquiry.contact || "Not added")),
+      createMetaItem("Phone", escapeHtml(inquiry.contact || "Not added")),
+      inquiry.email ? createMetaItem("Email", escapeHtml(inquiry.email)) : "",
       createMetaItem("Event", escapeHtml(inquiry.eventType || "Not added")),
       createMetaItem("Service", escapeHtml(inquiry.serviceType || "Not added")),
       createMetaItem("Date", joinDateTime(inquiry.eventDate, inquiry.eventTime)),
@@ -2829,6 +2831,7 @@ function normalizeInquiry(inquiry) {
     id: inquiry.id || crypto.randomUUID(),
     clientName: inquiry.clientName || "",
     contact: inquiry.contact || "",
+    email: inquiry.email || "",
     eventType: inquiry.eventType || "Event enquiry",
     serviceType: inquiry.serviceType || "Both",
     eventDate: inquiry.eventDate || "",

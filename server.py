@@ -257,6 +257,7 @@ def get_public_enquiry_owner(connection: sqlite3.Connection) -> sqlite3.Row | No
 def build_public_enquiry(payload: dict) -> dict:
     client_name = clean_text(payload.get("clientName"), 120)
     contact = clean_text(payload.get("contact"), 160)
+    email = clean_text(payload.get("email"), 200)
     event_type = clean_text(payload.get("eventType"), 80) or "Event enquiry"
     custom_event_type = clean_text(payload.get("customEventType"), 80)
     if event_type == "Other" and custom_event_type:
@@ -285,6 +286,7 @@ def build_public_enquiry(payload: dict) -> dict:
         "id": secrets.token_urlsafe(16),
         "clientName": client_name,
         "contact": contact,
+        "email": email or "",
         "eventType": event_type,
         "serviceType": clean_text(payload.get("serviceType"), 40) or "Both",
         "eventDate": clean_text(payload.get("eventDate"), 20),
@@ -404,6 +406,7 @@ def build_inquiry_telegram_message(inquiry: dict) -> str:
     event_type = clean_text(inquiry.get("eventType"), 40) or "Event"
     event_date = format_display_date(inquiry.get("eventDate", ""))
     contact    = clean_text(inquiry.get("contact"), 80)
+    email      = clean_text(inquiry.get("email"), 120)
     location   = clean_text(inquiry.get("location"), 80)
     lines = [
         "📩 <b>New Inquiry — Tales by DVS</b>",
@@ -412,6 +415,8 @@ def build_inquiry_telegram_message(inquiry: dict) -> str:
     ]
     if contact:
         lines.append(f"📞 {contact}")
+    if email:
+        lines.append(f"✉️ {email}")
     if location:
         lines.append(f"📍 {location}")
     return "\n".join(lines)
