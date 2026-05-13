@@ -648,4 +648,98 @@
     });
   })();
 
+  /* ═══════════════════════════════════════════════════════════════
+     15. BACKGROUND AMBIENT MUSIC
+  ═══════════════════════════════════════════════════════════════ */
+  (function () {
+    var musicBtn = document.getElementById("musicToggleBtn");
+    if (!musicBtn) return;
+
+    var ctx = null;
+    var masterGain = null;
+    var isPlaying = false;
+    var noteIndex = 0;
+    var nextNoteTime = 0;
+    var timerID = null;
+
+    /* Gentle Am → F → C → G arpeggio sequence */
+    var sequence = [
+      220.00, 261.63, 329.63,   /* Am : A3, C4, E4 */
+      174.61, 220.00, 261.63,   /* F  : F3, A3, C4 */
+      130.81, 164.81, 196.00,   /* C  : C3, E3, G3 */
+      196.00, 246.94, 293.66    /* G  : G3, B3, D4 */
+    ];
+    var NOTE_DUR = 2.0;
+    var NOTE_STEP = 1.5;
+
+    function initAudio() {
+      if (ctx) return;
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0, ctx.currentTime);
+      masterGain.connect(ctx.destination);
+    }
+
+    function playNote(freq, t) {
+      /* Main triangle tone */
+      var osc = ctx.createOscillator();
+      var g   = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.55, t + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.001, t + NOTE_DUR);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t + NOTE_DUR);
+
+      /* Sub-octave sine for warmth */
+      var sub = ctx.createOscillator();
+      var sg  = ctx.createGain();
+      sub.type = "sine";
+      sub.frequency.setValueAtTime(freq * 0.5, t);
+      sg.gain.setValueAtTime(0.25, t);
+      sg.gain.exponentialRampToValueAtTime(0.001, t + NOTE_DUR);
+      sub.connect(sg); sg.connect(masterGain);
+      sub.start(t); sub.stop(t + NOTE_DUR);
+    }
+
+    function schedule() {
+      while (nextNoteTime < ctx.currentTime + 0.12) {
+        playNote(sequence[noteIndex % sequence.length], nextNoteTime);
+        noteIndex++;
+        nextNoteTime += NOTE_STEP;
+      }
+      timerID = setTimeout(schedule, 50);
+    }
+
+    function startMusic() {
+      initAudio();
+      if (ctx.state === "suspended") ctx.resume();
+      isPlaying = true;
+      nextNoteTime = ctx.currentTime + 0.1;
+      noteIndex = 0;
+      masterGain.gain.cancelScheduledValues(ctx.currentTime);
+      masterGain.gain.setValueAtTime(0, ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 1.8);
+      schedule();
+      musicBtn.classList.add("is-playing");
+      musicBtn.setAttribute("aria-label", "Pause music");
+      musicBtn.querySelector(".music-btn-icon").textContent = "♫";
+    }
+
+    function stopMusic() {
+      clearTimeout(timerID);
+      isPlaying = false;
+      masterGain.gain.cancelScheduledValues(ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.2);
+      musicBtn.classList.remove("is-playing");
+      musicBtn.setAttribute("aria-label", "Play ambient music");
+      musicBtn.querySelector(".music-btn-icon").textContent = "♪";
+    }
+
+    musicBtn.addEventListener("click", function () {
+      isPlaying ? stopMusic() : startMusic();
+    });
+  })();
+
 })();

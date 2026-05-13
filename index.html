@@ -474,6 +474,73 @@
           </div>
         </div>
 
+        <!-- AI ASSISTANT -->
+        <section class="public-section public-ai-section reveal-section" id="assistant">
+          <div class="public-section-heading">
+            <p class="public-kicker">Got Questions?</p>
+            <h2>Ask the Assistant</h2>
+            <p>Check date availability, compare packages, or ask about event coverage — get instant answers before you reach out.</p>
+          </div>
+
+          <div class="public-ai-grid">
+            <!-- Left: chat input -->
+            <div class="public-ai-card">
+              <div class="public-ai-answer" id="publicAiAnswer">Ask something about a date, package, event type, or style and I'll guide you.</div>
+
+              <!-- Quick-prompt chips -->
+              <div class="public-ai-prompts">
+                <button type="button" class="public-ai-prompt" data-ai-prompt="What packages do you offer?">Packages</button>
+                <button type="button" class="public-ai-prompt" data-ai-prompt="Do you cover weddings?">Weddings</button>
+                <button type="button" class="public-ai-prompt" data-ai-prompt="Do you cover baby showers?">Baby Showers</button>
+                <button type="button" class="public-ai-prompt" data-ai-prompt="What is your photography style?">Style</button>
+                <button type="button" class="public-ai-prompt" data-ai-prompt="Can I see your portfolio?">Portfolio</button>
+              </div>
+
+              <form id="publicAiForm" class="public-ai-form">
+                <div class="public-ai-form-row">
+                  <label>
+                    Your question
+                    <textarea name="message" rows="3" placeholder="e.g. Are you available for a wedding on June 14th?"></textarea>
+                  </label>
+                  <label>
+                    Event date (optional)
+                    <input type="date" name="eventDate" />
+                  </label>
+                  <label>
+                    Event type (optional)
+                    <select name="eventType">
+                      <option value="">Any</option>
+                      <option value="Wedding">Wedding</option>
+                      <option value="Engagement">Engagement</option>
+                      <option value="Baby Shower">Baby Shower</option>
+                      <option value="Gender Reveal">Gender Reveal</option>
+                      <option value="House Warming">House Warming</option>
+                      <option value="Birthday">Birthday</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="submit" class="primary-button" id="publicAiSubmit">Ask Assistant</button>
+              </form>
+            </div>
+
+            <!-- Right: results panels -->
+            <div class="public-ai-side">
+              <div class="public-ai-panel">
+                <h3>Date Availability</h3>
+                <div id="publicAiAvailability" class="public-ai-placeholder">Add a date and I'll check whether it looks open.</div>
+              </div>
+              <div class="public-ai-panel">
+                <h3>Portfolio Matches</h3>
+                <div id="publicAiPortfolioMatches" class="public-ai-match-list"></div>
+              </div>
+              <div class="public-ai-panel">
+                <h3>You might also ask…</h3>
+                <div id="publicAiQuestionSuggestions" class="public-ai-question-list"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- ENQUIRY -->
         <section class="public-section public-enquiry-section reveal-section" id="enquiry">
           <div class="public-section-heading">
@@ -1865,6 +1932,11 @@
     transition: opacity 0.15s ease, transform 0.15s ease;
     transform:translateY(6px);
   "></div>
+
+  <!-- MUSIC TOGGLE -->
+  <button id="musicToggleBtn" class="music-toggle-btn" aria-label="Play ambient music" title="Ambient music">
+    <span class="music-btn-icon">♪</span>
+  </button>
 
   <script src="public.js" defer></script>
   </body>
