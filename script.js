@@ -1167,6 +1167,7 @@ function handleLeadSubmit(event) {
     actualHours: existingLead?.actualHours ?? null,
     advanceGiven: Number(formData.get("advanceGiven")) || 0,
     pendingAmount: Number(formData.get("pendingAmount")) || 0,
+    isFullyPaid: Number(formData.get("pendingAmount")) <= 0 && (Number(formData.get("amount")) > 0),
     deliverables: formData.get("deliverables").trim(),
     teamAssignments: readTeamRows(leadTeamList),
     status: formData.get("status") || "Confirmed",
@@ -2151,7 +2152,7 @@ function updateLeadPaymentStatus(id, isFullyPaid) {
     if (lead.id !== id) return lead;
     return normalizeLead({
       ...lead,
-      pendingAmount: isFullyPaid ? 0 : Math.max(Number(lead.amount || 0) - Number(lead.advanceGiven || 0), 0)
+      isFullyPaid
     });
   });
   saveState();
@@ -2817,9 +2818,7 @@ function normalizeLead(lead) {
     actualHours: parseOptionalNumber(lead.actualHours),
     amount,
     advanceGiven,
-    pendingAmount: Number.isFinite(Number(lead.pendingAmount))
-      ? Number(lead.pendingAmount)
-      : Math.max(amount - advanceGiven, 0),
+    pendingAmount: lead.isFullyPaid ? 0 : Math.max(amount - advanceGiven, 0),
     status: lead.status || "Confirmed",
     deliverables: lead.deliverables || "",
     teamAssignments: normalizeTeamAssignments(lead)
@@ -3008,7 +3007,7 @@ function addTeamMemberRow(container, values = {}) {
   const dataSharedSelect = item.querySelector('[data-name="memberDataSharedStatus"]');
 
   nameInput.value = values.name || "";
-  rateInput.value = values.rate || "";
+  rateInput.value = values.amount ?? values.rate ?? "";
   paymentStatusSelect.value = values.paymentStatus || (values.paid ? "Completed" : "Pending");
   dataSharedSelect.value = values.dataSharedStatus || (values.dataShared ? "Shared" : "Not Shared");
 
@@ -3021,15 +3020,18 @@ function addTeamMemberRow(container, values = {}) {
 
 function readTeamRows(container) {
   return Array.from(container.querySelectorAll(".team-member-item"))
-    .map((row) => ({
-      id: crypto.randomUUID(),
-      name: row.querySelector('[data-name="memberName"]').value.trim(),
-      hours: null,
-      rate: Number(row.querySelector('[data-name="memberRate"]').value) || 0,
-      amount: null,
-      paymentStatus: row.querySelector('[data-name="memberPaymentStatus"]').value || "Pending",
-      dataSharedStatus: row.querySelector('[data-name="memberDataSharedStatus"]').value || "Not Shared"
-    }))
+    .map((row) => {
+      const flatAmount = Number(row.querySelector('[data-name="memberRate"]').value) || 0;
+      return {
+        id: crypto.randomUUID(),
+        name: row.querySelector('[data-name="memberName"]').value.trim(),
+        hours: null,
+        rate: flatAmount,
+        amount: flatAmount || null,
+        paymentStatus: row.querySelector('[data-name="memberPaymentStatus"]').value || "Pending",
+        dataSharedStatus: row.querySelector('[data-name="memberDataSharedStatus"]').value || "Not Shared"
+      };
+    })
     .map((item) => ({
       ...item,
       paid: item.paymentStatus === "Completed"

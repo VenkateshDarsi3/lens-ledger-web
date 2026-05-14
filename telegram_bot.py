@@ -117,6 +117,23 @@ def all_events(state):
                 "status": "Confirmed",
             })
 
+    for job in state.get("shootShareJobs", []):
+        raw = (job.get("date") or "").strip()[:10]
+        if not raw:
+            continue
+        try:
+            ev_date = datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        team = [m.get("name", "") for m in (job.get("teamAssignments") or []) if m.get("name")]
+        events.append({
+            "date":   ev_date,
+            "client": job.get("forPhotographer") or "Shoot & Share",
+            "type":   "Shoot & Share",
+            "team":   team,
+            "status": "Confirmed",
+        })
+
     return sorted(events, key=lambda e: e["date"])
 
 
