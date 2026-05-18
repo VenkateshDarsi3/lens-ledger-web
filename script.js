@@ -3490,7 +3490,11 @@ function formatTeamAssignments(assignments) {
 }
 
 function sumTeamAssignments(assignments) {
-  return (assignments || []).reduce((sum, item) => (item.paymentStatus === "Completed" || item.paid) ? sum : sum + Number(item.amount || 0), 0);
+  return (assignments || []).reduce((sum, item) => {
+    if (item.paymentStatus === "Completed" || item.paid) return sum;
+    const due = Math.max(Number(item.amount || 0) - Number(item.paidAmount || 0), 0);
+    return sum + due;
+  }, 0);
 }
 
 function formatMonthValue(date) {
@@ -3615,8 +3619,8 @@ function renderTeamDueBreakdown() {
         </div>
         <div class="overview-team-events">
           ${member.events.map((event) => `
-            <div class="overview-team-event" data-type="${event.type}" data-lead-id="${event.leadId || ""}" data-plan-id="${event.planId || ""}" data-event-id="${event.eventId || ""}" data-member-id="${event.memberId || ""}">
-              <span>${escapeHtml(event.label)}</span>
+            <div class="overview-team-event" data-type="${event.type}" data-lead-id="${event.leadId || ""}" data-plan-id="${event.planId || ""}" data-event-id="${event.eventId || ""}" data-member-id="${event.memberId || ""}" data-paid-amount="${event.paidAmount || 0}">
+              <span>${escapeHtml(event.label)}${event.paidAmount > 0 ? ` <em style="color:var(--muted);font-size:0.82rem;font-style:normal;">(${formatCurrency(event.paidAmount)} paid)</em>` : ""}</span>
               <div class="team-pay-controls">
                 <input type="number" class="team-pay-input" placeholder="Amount paid" min="0" step="0.01" />
                 <button type="button" class="team-pay-partial-btn secondary-button">Pay</button>
@@ -3651,7 +3655,8 @@ function renderTeamDueBreakdown() {
     partialBtn.addEventListener("click", () => {
       const val = parseFloat(input.value);
       if (!val || val <= 0) { input.focus(); return; }
-      applyPayment("Partial", val);
+      const alreadyPaid = parseFloat(row.dataset.paidAmount || "0") || 0;
+      applyPayment("Partial", alreadyPaid + val);
     });
   });
 }
@@ -3819,7 +3824,12 @@ function buildTeamDueByMember() {
     const key = name.toLowerCase();
     const existing = buckets.get(key) || { name, total: 0, events: [] };
     existing.total += numericAmount;
-    existing.events.push({ label: eventLabel, amount: numericAmount, ...meta });
+    existing.events.push({
+      label: eventLabel,
+      amount: numericAmount,
+      paidAmount: Number(member.paidAmount || 0),
+      ...meta
+    });
     buckets.set(key, existing);
   };
 
@@ -3828,7 +3838,8 @@ function buildTeamDueByMember() {
 
     (lead.teamAssignments || []).forEach((item) => {
       if (item.paymentStatus === "Completed" || item.paid) return;
-      addDue(item, `${lead.clientName} - ${lead.eventType}`, item.amount, {
+      const due = Math.max(Number(item.amount || 0) - Number(item.paidAmount || 0), 0);
+      addDue(item, `${lead.clientName} - ${lead.eventType}`, due, {
         type: "lead", leadId: lead.id, memberId: item.id
       });
     });
@@ -3838,7 +3849,8 @@ function buildTeamDueByMember() {
     (plan.events || []).forEach((event) => {
       (event.teamAssignments || []).forEach((item) => {
         if (item.paymentStatus === "Completed" || item.paid) return;
-        addDue(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`, item.amount, {
+        const due = Math.max(Number(item.amount || 0) - Number(item.paidAmount || 0), 0);
+        addDue(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`, due, {
           type: "wedding", planId: plan.id, eventId: event.id, memberId: item.id
         });
       });
