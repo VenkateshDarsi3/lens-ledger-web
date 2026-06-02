@@ -1152,6 +1152,55 @@ a { color: inherit; }
   color: #8a5e1a;
 }
 
+.team-paid-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-paid-edit-btn {
+  width: auto;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.overview-team-event-paid:hover .team-paid-edit-btn {
+  opacity: 1;
+}
+
+.team-paid-edit-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.team-paid-amount-input {
+  width: 140px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(118, 78, 53, 0.2);
+  font-size: 0.9rem;
+}
+
+.team-paid-edit-controls .primary-button,
+.team-paid-edit-controls .secondary-button {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+}
+
+.team-paid-reset-btn {
+  color: #8d3a1d !important;
+  border-color: rgba(184, 92, 52, 0.3) !important;
+}
+
 .team-pay-controls {
   display: flex;
   align-items: center;

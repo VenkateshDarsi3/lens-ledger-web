@@ -3818,7 +3818,7 @@ function renderTeamSchedule() {
 function buildTeamPaidByMember() {
   const buckets = new Map();
 
-  const addPaid = (member, eventLabel) => {
+  const addPaid = (member, eventLabel, meta) => {
     const name = String(member?.name || "").trim();
     if (!name) return;
 
@@ -3834,7 +3834,9 @@ function buildTeamPaidByMember() {
     existing.events.push({
       label: eventLabel,
       paid: effectivePaid,
-      isFullyPaid
+      fullAmount,
+      isFullyPaid,
+      ...meta
     });
     buckets.set(key, existing);
   };
@@ -3842,14 +3844,18 @@ function buildTeamPaidByMember() {
   state.leads.forEach((lead) => {
     if (lead.source === "wedding-plan") return;
     (lead.teamAssignments || []).forEach((item) => {
-      addPaid(item, `${lead.clientName} - ${lead.eventType}`);
+      addPaid(item, `${lead.clientName} - ${lead.eventType}`, {
+        type: "lead", leadId: lead.id, memberId: item.id
+      });
     });
   });
 
   state.weddingPlans.forEach((plan) => {
     (plan.events || []).forEach((event) => {
       (event.teamAssignments || []).forEach((item) => {
-        addPaid(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`);
+        addPaid(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`, {
+          type: "wedding", planId: plan.id, eventId: event.id, memberId: item.id
+        });
       });
     });
   });
@@ -3881,14 +3887,31 @@ function renderTeamPaidBreakdown() {
         </div>
         <div class="overview-team-events">
           ${member.events.map((event) => `
-            <div class="overview-team-event overview-team-event-paid">
+            <div class="overview-team-event overview-team-event-paid"
+              data-type="${event.type}"
+              data-lead-id="${event.leadId || ""}"
+              data-plan-id="${event.planId || ""}"
+              data-event-id="${event.eventId || ""}"
+              data-member-id="${event.memberId || ""}"
+              data-full-amount="${event.fullAmount}"
+              data-is-fully-paid="${event.isFullyPaid}">
               <span>
                 ${escapeHtml(event.label)}
                 <em class="team-paid-badge ${event.isFullyPaid ? "team-paid-full" : "team-paid-partial"}">
                   ${event.isFullyPaid ? "Fully paid" : "Partial"}
                 </em>
               </span>
-              <strong>${formatCurrency(event.paid)}</strong>
+              <div class="team-paid-edit-row">
+                <strong>${formatCurrency(event.paid)}</strong>
+                <button type="button" class="team-paid-edit-btn secondary-button">Edit</button>
+              </div>
+              <div class="team-paid-edit-controls" style="display:none;">
+                <input type="number" class="team-paid-amount-input" min="0" step="0.01"
+                  placeholder="New paid amount" value="${event.isFullyPaid ? event.fullAmount : event.paid}" />
+                <button type="button" class="team-paid-save-btn primary-button">Save</button>
+                <button type="button" class="team-paid-reset-btn secondary-button">Reset to Unpaid</button>
+                <button type="button" class="team-paid-cancel-btn secondary-button">Cancel</button>
+              </div>
             </div>
           `).join("")}
         </div>
@@ -3896,6 +3919,56 @@ function renderTeamPaidBreakdown() {
       <strong class="overview-team-total">${formatCurrency(member.total)}</strong>
     </div>
   `).join("");
+
+  // Wire up edit controls
+  container.querySelectorAll(".overview-team-event-paid").forEach((row) => {
+    const editBtn = row.querySelector(".team-paid-edit-btn");
+    const saveBtn = row.querySelector(".team-paid-save-btn");
+    const resetBtn = row.querySelector(".team-paid-reset-btn");
+    const cancelBtn = row.querySelector(".team-paid-cancel-btn");
+    const editRow = row.querySelector(".team-paid-edit-row");
+    const editControls = row.querySelector(".team-paid-edit-controls");
+    const amountInput = row.querySelector(".team-paid-amount-input");
+    const { type, leadId, planId, eventId, memberId, fullAmount } = row.dataset;
+    const maxAmount = Number(fullAmount || 0);
+
+    const applyUpdate = (paymentStatus, paidAmount) => {
+      if (type === "lead") {
+        updateLeadTeamAssignment(leadId, memberId, { paymentStatus, paidAmount });
+      } else {
+        updateWeddingEventTeamAssignment(planId, eventId, memberId, { paymentStatus, paidAmount });
+      }
+      renderTeamDueBreakdown();
+      renderTeamPaidBreakdown();
+    };
+
+    editBtn.addEventListener("click", () => {
+      editRow.style.display = "none";
+      editControls.style.display = "flex";
+      amountInput.focus();
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      editControls.style.display = "none";
+      editRow.style.display = "flex";
+    });
+
+    saveBtn.addEventListener("click", () => {
+      const val = parseFloat(amountInput.value);
+      if (isNaN(val) || val < 0) { amountInput.focus(); return; }
+      if (val >= maxAmount) {
+        applyUpdate("Completed", null);
+      } else if (val === 0) {
+        applyUpdate("Pending", 0);
+      } else {
+        applyUpdate("Partial", val);
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      applyUpdate("Pending", 0);
+    });
+  });
 }
 
 function buildTeamDueByMember() {
