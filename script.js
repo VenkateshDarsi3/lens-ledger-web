@@ -1772,6 +1772,7 @@ function renderStats() {
   });
   renderMonthlySpend();
   renderTeamDueBreakdown();
+  renderTeamPaidBreakdown();
 }
 
 function renderOverviewDetails(stats) {
@@ -3812,6 +3813,89 @@ function renderTeamSchedule() {
     tsMonth = d.toISOString().slice(0, 7);
     renderTeamSchedule();
   });
+}
+
+function buildTeamPaidByMember() {
+  const buckets = new Map();
+
+  const addPaid = (member, eventLabel) => {
+    const name = String(member?.name || "").trim();
+    if (!name) return;
+
+    const paidAmount = Number(member.paidAmount || 0);
+    const fullAmount = Number(member.amount || 0);
+    const isFullyPaid = member.paymentStatus === "Completed" || member.paid;
+    const effectivePaid = isFullyPaid ? fullAmount : paidAmount;
+    if (effectivePaid <= 0) return;
+
+    const key = name.toLowerCase();
+    const existing = buckets.get(key) || { name, total: 0, events: [] };
+    existing.total += effectivePaid;
+    existing.events.push({
+      label: eventLabel,
+      paid: effectivePaid,
+      isFullyPaid
+    });
+    buckets.set(key, existing);
+  };
+
+  state.leads.forEach((lead) => {
+    if (lead.source === "wedding-plan") return;
+    (lead.teamAssignments || []).forEach((item) => {
+      addPaid(item, `${lead.clientName} - ${lead.eventType}`);
+    });
+  });
+
+  state.weddingPlans.forEach((plan) => {
+    (plan.events || []).forEach((event) => {
+      (event.teamAssignments || []).forEach((item) => {
+        addPaid(item, `${plan.clientName} - ${event.eventName || "Wedding Event"}`);
+      });
+    });
+  });
+
+  return [...buckets.values()]
+    .map((member) => ({
+      ...member,
+      events: member.events.sort((a, b) => b.paid - a.paid || a.label.localeCompare(b.label))
+    }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+
+function renderTeamPaidBreakdown() {
+  const container = document.querySelector("#teamPaidBreakdown");
+  if (!container) return;
+
+  const members = buildTeamPaidByMember();
+  if (!members.length) {
+    container.innerHTML = '<p class="overview-team-empty">No payments recorded yet.</p>';
+    return;
+  }
+
+  container.innerHTML = members.map((member) => `
+    <div class="overview-spend-row overview-team-row">
+      <div class="overview-team-copy">
+        <div class="overview-team-header">
+          <strong class="overview-team-name">${escapeHtml(member.name)}</strong>
+          <strong class="overview-team-total-mobile">${formatCurrency(member.total)}</strong>
+        </div>
+        <div class="overview-team-events">
+          ${member.events.map((event) => `
+            <div class="overview-team-event overview-team-event-paid">
+              <span>
+                ${escapeHtml(event.label)}
+                <em class="team-paid-badge ${event.isFullyPaid ? "team-paid-full" : "team-paid-partial"}">
+                  ${event.isFullyPaid ? "Fully paid" : "Partial"}
+                </em>
+              </span>
+              <strong>${formatCurrency(event.paid)}</strong>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <strong class="overview-team-total">${formatCurrency(member.total)}</strong>
+    </div>
+  `).join("");
 }
 
 function buildTeamDueByMember() {

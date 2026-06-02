@@ -1131,6 +1131,27 @@ a { color: inherit; }
 .overview-team-event span { color: var(--muted); font-size: 0.9rem; flex: 1; min-width: 120px; }
 .overview-team-empty { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
 
+.overview-team-event-paid { background: rgba(77, 124, 88, 0.07); }
+
+.team-paid-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-style: normal;
+  vertical-align: middle;
+}
+.team-paid-full {
+  background: rgba(77, 124, 88, 0.14);
+  color: #2f6b45;
+}
+.team-paid-partial {
+  background: rgba(184, 130, 52, 0.14);
+  color: #8a5e1a;
+}
+
 .team-pay-controls {
   display: flex;
   align-items: center;
