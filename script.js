@@ -2973,6 +2973,7 @@ function normalizeTeamAssignments(entity) {
       hours: parseOptionalNumber(item.hours),
       rate: Number(item.rate) || 0,
       amount: parseOptionalNumber(item.amount),
+      paidAmount: Number(item.paidAmount || 0),
       paid: item.paymentStatus ? item.paymentStatus === "Completed" : Boolean(item.paid),
       paymentStatus: item.paymentStatus || (item.paid ? "Completed" : "Pending"),
       dataSharedStatus: item.dataSharedStatus || (item.dataShared ? "Shared" : "Not Shared")
