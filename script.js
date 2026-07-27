@@ -1315,6 +1315,7 @@ function renderInquiries() {
     badge.classList.add("status-follow-up");
     title.textContent = `${inquiry.clientName || "Client"} - ${inquiry.eventType || "Event"}`;
     meta.innerHTML = [
+      createMetaItem("Submitted", formatSubmittedAt(inquiry.createdAt)),
       createMetaItem("Phone", escapeHtml(inquiry.contact || "Not added")),
       inquiry.email ? createMetaItem("Email", escapeHtml(inquiry.email)) : "",
       createMetaItem("Event", escapeHtml(inquiry.eventType || "Not added")),
@@ -3359,6 +3360,19 @@ function joinDateTime(dateString, timeString) {
   if (dateString && timeString) return `${formatDate(dateString)} | ${formatTime(timeString)}`;
   if (dateString) return formatDate(dateString);
   return formatTime(timeString);
+}
+
+function formatSubmittedAt(isoString) {
+  if (!isoString) return "Unknown";
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function formatCurrency(amount) {
